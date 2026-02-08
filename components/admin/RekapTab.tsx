@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid3X3, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid3x3, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import { exportToExcel, formatDurationToText, SUBJECTS_DB } from '../../utils/adminHelpers';
 import { User, ExternalGrade } from '../../types';
@@ -457,7 +457,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                             <List size={16}/> Tabel
                         </button>
                         <button onClick={() => setViewMode('matrix')} className={`p-2 rounded-md flex items-center gap-2 text-xs font-bold transition ${viewMode === 'matrix' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
-                            <Grid3X3 size={16}/> Leger
+                            <Grid3x3 size={16}/> Leger
                         </button>
                      </div>
 
@@ -545,7 +545,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                     /* MATRIX VIEW TABLE */
                     filterSubject === 'all' ? (
                         <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                            <Grid3X3 className="mb-2 opacity-20" size={48}/>
+                            <Grid3x3 className="mb-2 opacity-20" size={48}/>
                             <span className="font-bold">Silakan Pilih Mata Pelajaran pada menu dropdown untuk melihat Leger.</span>
                         </div>
                     ) : (
