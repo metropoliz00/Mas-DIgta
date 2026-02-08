@@ -1,3 +1,4 @@
+
 {
   "name": "cbt-tka-system",
   "private": true,
@@ -9,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.263.1",
+    "lucide-react": "^0.460.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "xlsx": "^0.18.5"
