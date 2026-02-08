@@ -1,8 +1,8 @@
 
-import { User, Exam, QuestionWithOptions, QuestionRow, SchoolSchedule, LearningObjective } from '../types';
+import { User, Exam, QuestionWithOptions, QuestionRow, SchoolSchedule, LearningObjective, ExternalGrade } from '../types';
 
 // The Apps Script Web App URL provided
-const GAS_EXEC_URL = "https://script.google.com/macros/s/AKfycbzrl3RrsrwdzMfKpzC-iXUqF2jNlY-dcpQo5VKJbixVQN2LDsnwlA330zo5sBlVa9JAPw/exec";
+const GAS_EXEC_URL = "https://script.google.com/macros/s/AKfycbyAfrhJcSYCNjpI2oHGsO3Ck-dVMS7NQorq2PrUWHk4kGBJgalbGggnOKpdlAWaCSBoHg/exec";
 
 // Check if running inside GAS iframe
 const isEmbedded = typeof window !== 'undefined' && window.google && window.google.script;
@@ -282,6 +282,11 @@ export const api = {
 
   getAnalysis: async (subject: string): Promise<any> => {
       return await callBackend('getAnalysisData', subject);
+  },
+
+  // NEW: Save External Grades
+  saveExternalGrades: async (data: ExternalGrade[]): Promise<{success: boolean}> => {
+      return await callBackend('saveExternalGrades', data);
   },
 
   submitExam: async (payload: { user: User, subject: string, answers: any, startTime: number, displayedQuestionCount?: number, questionIds?: string[] }) => {

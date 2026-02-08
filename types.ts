@@ -106,6 +106,15 @@ export interface LearningObjective {
   text_tujuan: string;
 }
 
+// 9. External Grades (Manual Input/Import)
+export interface ExternalGrade {
+  id?: string;
+  username: string;
+  mapel: string;
+  exam_type: string; // Sumatif 1, Sumatif 2, etc.
+  nilai: number;
+}
+
 // UI State Helper Types
 export interface QuestionWithOptions extends Question {
   options: Option[];

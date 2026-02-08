@@ -5,6 +5,7 @@ const SHEET_USERS = "Users";   // Students
 const SHEET_CONFIG = "Config";
 const SHEET_USER_CONFIGS = "UserConfigs"; // NEW: Per-user settings
 const SHEET_RESULTS = "Results";
+const SHEET_EXTERNAL_GRADES = "ExternalGrades"; // NEW: For manual imports
 const SHEET_SURVEY = "SurveyResults";
 const SHEET_TP = "LearningObjectives";
 const SHEET_SCHEDULES = "SchoolSchedules";
@@ -68,10 +69,11 @@ function doPost(e) {
       case 'deleteLearningObjective': result = deleteLearningObjective(...args); break;
       case 'importLearningObjectives': result = importLearningObjectives(...args); break;
 
-      // ADMIN - DASHBOARD & REPORTS
+      // ADMIN - DASHBOARD & REPORTS & MANUAL GRADES
       case 'getDashboardData': result = getDashboardData(); break;
       case 'getRecapData': result = getRecapData(); break;
       case 'getAnalysisData': result = getAnalysisData(...args); break;
+      case 'saveExternalGrades': result = saveExternalGrades(...args); break; // NEW
       
       default: result = { error: 'Unknown action: ' + action };
     }
@@ -92,7 +94,6 @@ function getSheet(name) {
     sheet = ss.insertSheet(name);
     
     if (name === SHEET_USERS) {
-      // Added ActiveTP (Col 15) and ExamType (Col 16)
       sheet.appendRow(["ID", "Username", "Password", "Fullname", "Role", "Kelas", "School", "Kecamatan", "Gender", "PhotoURL", "ActiveExam", "Session", "Status", "LastLogin", "ActiveTP", "ExamType"]);
     } else if (name === SHEET_ADMINS) {
       sheet.appendRow(["ID", "Username", "Password", "Fullname", "Role", "Kelas", "School", "Kecamatan", "Gender", "PhotoURL"]);
@@ -104,12 +105,15 @@ function getSheet(name) {
       sheet.appendRow(["MAX_QUESTIONS", "0"]);
       sheet.appendRow(["KKTP", "75"]);
     } else if (name === SHEET_USER_CONFIGS) {
-      // NEW SHEET FOR PERSONAL CONFIG
       sheet.appendRow(["Username", "ConfigJSON", "LastUpdated"]);
     } else if (name === SHEET_RESULTS) {
-      sheet.appendRow(["Timestamp", "Username", "Nama", "Sekolah", "Mapel", "Nilai", "AnalisisJSON", "Durasi"]);
+      // UPDATED: Added JenisUjian at Col 9
+      sheet.appendRow(["Timestamp", "Username", "Nama", "Sekolah", "Mapel", "Nilai", "AnalisisJSON", "Durasi", "JenisUjian"]);
+    } else if (name === SHEET_EXTERNAL_GRADES) {
+      // NEW: Sheet for Manual/Imported Grades
+      sheet.appendRow(["ID", "Username", "Mapel", "ExamType", "Nilai", "Timestamp"]);
     } else if (name === SHEET_TP) {
-      sheet.appendRow(["ID", "Mapel", "Materi", "Kelas", "TujuanPembelajaran"]);
+      sheet.appendRow(["ID", "Mapel", "Materi", "Kelas", "Tujuan Pembelajaran"]);
     } else if (name === SHEET_SCHEDULES) {
       sheet.appendRow(["Sekolah", "Gelombang", "TanggalMulai", "TanggalSelesai"]);
     } else if (name === SHEET_LOGS) {
@@ -140,6 +144,7 @@ function logActivity(username, action, detail) {
   } catch(e) {}
 }
 
+// ... [Keep existing Login, User, Config, Question functions unchanged] ...
 function login(username, password) {
   const normalizedUser = String(username).toLowerCase().trim();
   const cleanPass = String(password).trim();
@@ -341,18 +346,10 @@ function saveUser(u) {
 
 function deleteUser(username) {
   let deleted = false;
-  // Try finding in Admins
   const adminRow = findUserRow(SHEET_ADMINS, username);
-  if (adminRow) { 
-      adminRow.sheet.deleteRow(adminRow.rowIndex); 
-      deleted = true; 
-  }
-  // Try finding in Users
+  if (adminRow) { adminRow.sheet.deleteRow(adminRow.rowIndex); deleted = true; }
   const userRow = findUserRow(SHEET_USERS, username);
-  if (userRow) { 
-      userRow.sheet.deleteRow(userRow.rowIndex); 
-      deleted = true; 
-  }
+  if (userRow) { userRow.sheet.deleteRow(userRow.rowIndex); deleted = true; }
   return { success: deleted };
 }
 
@@ -362,38 +359,15 @@ function importUsers(users) {
   users.forEach(u => {
     const role = normalizeRole(u.role);
     const id = u.id || ((role === 'siswa' ? 'SIS-' : 'IMP-') + Math.floor(Math.random() * 1000000));
-    // Explicit conversion to string to prevent null errors in setValues
-    const row = [
-        String(id || ""),
-        String(u.username || ""), 
-        String(u.password || ""), 
-        String(u.fullname || ""), 
-        String(role || ""),
-        String(u.kelas || ""),
-        String(u.school || ""), 
-        String(u.kecamatan || ""), 
-        String(u.gender || "L"),
-        String(u.photo_url || "")
-    ];
-    if (role === 'admin' || role === 'Guru') {
-        admins.push(row);
-    } else {
-        // Init students with empty exam data + examType (6 empty slots)
-        students.push([...row, '', '', 'OFFLINE', '', '', '']);
-    }
+    const row = [String(id || ""), String(u.username || ""), String(u.password || ""), String(u.fullname || ""), String(role || ""), String(u.kelas || ""), String(u.school || ""), String(u.kecamatan || ""), String(u.gender || "L"), String(u.photo_url || "")];
+    if (role === 'admin' || role === 'Guru') admins.push(row);
+    else students.push([...row, '', '', 'OFFLINE', '', '', '']);
   });
-  if (admins.length > 0) {
-    const s = getSheet(SHEET_ADMINS);
-    s.getRange(s.getLastRow() + 1, 1, admins.length, admins[0].length).setValues(admins);
-  }
-  if (students.length > 0) {
-    const s = getSheet(SHEET_USERS);
-    s.getRange(s.getLastRow() + 1, 1, students.length, students[0].length).setValues(students);
-  }
+  if (admins.length > 0) getSheet(SHEET_ADMINS).getRange(getSheet(SHEET_ADMINS).getLastRow() + 1, 1, admins.length, admins[0].length).setValues(admins);
+  if (students.length > 0) getSheet(SHEET_USERS).getRange(getSheet(SHEET_USERS).getLastRow() + 1, 1, students.length, students[0].length).setValues(students);
   return { success: true };
 }
 
-// ... (Config, Questions, Subject List) ...
 function getConfigMap() {
   const data = getData(SHEET_CONFIG);
   const map = {};
@@ -401,10 +375,7 @@ function getConfigMap() {
   return map;
 }
 
-// NEW: Helper to get ALL config at once
-function getAppConfig() {
-  return getConfigMap();
-}
+function getAppConfig() { return getConfigMap(); }
 
 function saveConfig(key, value) {
   const sheet = getSheet(SHEET_CONFIG);
@@ -421,44 +392,30 @@ function saveConfig(key, value) {
   return { success: true };
 }
 
-// Global Config
 function saveBatchConfig(configObj) {
   const sheet = getSheet(SHEET_CONFIG);
   const data = sheet.getDataRange().getValues();
   const keyRowMap = {};
-  for (let i = 1; i < data.length; i++) {
-    keyRowMap[data[i][0]] = i + 1;
-  }
+  for (let i = 1; i < data.length; i++) { keyRowMap[data[i][0]] = i + 1; }
   const newRows = [];
   for (const [key, value] of Object.entries(configObj)) {
-    if (keyRowMap[key]) {
-      sheet.getRange(keyRowMap[key], 2).setValue(value);
-    } else {
-      newRows.push([key, value]);
-    }
+    if (keyRowMap[key]) sheet.getRange(keyRowMap[key], 2).setValue(value);
+    else newRows.push([key, value]);
   }
-  if (newRows.length > 0) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 2).setValues(newRows);
-  }
+  if (newRows.length > 0) sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 2).setValues(newRows);
   return { success: true };
 }
 
-// NEW: USER SPECIFIC CONFIG
 function getUserConfig(username) {
   const sheet = getSheet(SHEET_USER_CONFIGS);
   const data = sheet.getDataRange().getDisplayValues();
   const targetUser = String(username).toLowerCase().trim();
-  
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).toLowerCase().trim() === targetUser) {
-      try {
-        return JSON.parse(data[i][1]); // ConfigJSON is in column 2
-      } catch (e) {
-        return {};
-      }
+      try { return JSON.parse(data[i][1]); } catch (e) { return {}; }
     }
   }
-  return {}; // Return empty object if no config found
+  return {};
 }
 
 function saveUserConfig(username, configObj) {
@@ -467,7 +424,6 @@ function saveUserConfig(username, configObj) {
   const targetUser = String(username).toLowerCase().trim();
   const jsonString = JSON.stringify(configObj);
   const timestamp = new Date().toISOString();
-  
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).toLowerCase().trim() === targetUser) {
       sheet.getRange(i + 1, 2).setValue(jsonString);
@@ -475,15 +431,11 @@ function saveUserConfig(username, configObj) {
       return { success: true };
     }
   }
-  // If not found, append new row
   sheet.appendRow([username, jsonString, timestamp]);
   return { success: true };
 }
 
-function getTokenFromConfig() {
-  const map = getConfigMap();
-  return map['TOKEN'] || 'TOKEN';
-}
+function getTokenFromConfig() { const map = getConfigMap(); return map['TOKEN'] || 'TOKEN'; }
 
 function getSubjectList() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -495,12 +447,7 @@ function getSubjectList() {
     }
   });
   const config = getConfigMap();
-  return {
-    subjects: subjects,
-    duration: config['DURATION'] || 60,
-    maxQuestions: config['MAX_QUESTIONS'] || 0,
-    kktp: config['KKTP'] || 75
-  };
+  return { subjects: subjects, duration: config['DURATION'] || 60, maxQuestions: config['MAX_QUESTIONS'] || 0, kktp: config['KKTP'] || 75 };
 }
 
 function getQuestionsSheetName(subject) { return `Questions_${subject}`; }
@@ -536,10 +483,7 @@ function getQuestionsFromSheet(subject) {
           surveyQ.push({ id: 'Q1', text: 'Ruang kelas saya bersih dan nyaman.', type: 'LIKERT' });
           surveyQ.push({ id: 'Q2', text: 'Guru menjelaskan pelajaran dengan jelas.', type: 'LIKERT' });
       }
-      const options = [
-          {id: '1', text: 'Sangat Kurang'}, {id: '2', text: 'Kurang'}, 
-          {id: '3', text: 'Sesuai'}, {id: '4', text: 'Sangat Sesuai'}
-      ];
+      const options = [{id: '1', text: 'Sangat Kurang'}, {id: '2', text: 'Kurang'}, {id: '3', text: 'Sesuai'}, {id: '4', text: 'Sangat Sesuai'}];
       return surveyQ.map(q => ({ ...q, options }));
   }
   const sheetName = getQuestionsSheetName(subject);
@@ -551,10 +495,7 @@ function getQuestionsFromSheet(subject) {
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue; 
-    const q = {
-      id: row[0], text: row[1], type: row[2], image: row[3],
-      options: [], kelas: row[10], tp_id: row[11]
-    };
+    const q = { id: row[0], text: row[1], type: row[2], image: row[3], options: [], kelas: row[10], tp_id: row[11] };
     if (q.type === 'PG' || q.type === 'PGK') {
       if (row[4]) q.options.push({ id: 'A', text: row[4] });
       if (row[5]) q.options.push({ id: 'B', text: row[5] });
@@ -576,9 +517,7 @@ function saveQuestion(subject, q) {
   if (sheet.getLastRow() === 0) sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID"]);
   const data = sheet.getDataRange().getValues();
   let rowIndex = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(q.id)) { rowIndex = i + 1; break; }
-  }
+  for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(q.id)) { rowIndex = i + 1; break; } }
   const rowData = [q.id, q.text_soal, q.tipe_soal, q.gambar, q.opsi_a, q.opsi_b, q.opsi_c, q.opsi_d, q.kunci_jawaban, q.bobot, q.kelas, q.tp_id];
   if (rowIndex > 0) sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
   else sheet.appendRow(rowData);
@@ -589,12 +528,7 @@ function deleteQuestion(subject, id) {
   const sheetName = getQuestionsSheetName(subject);
   const sheet = getSheet(sheetName);
   const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(id)) {
-      sheet.deleteRow(i + 1);
-      return { success: true };
-    }
-  }
+  for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(id)) { sheet.deleteRow(i + 1); return { success: true }; } }
   return { success: false };
 }
 
@@ -611,14 +545,7 @@ function getLearningObjectives() {
   const sheet = getSheet(SHEET_TP);
   const data = sheet.getDataRange().getDisplayValues();
   if (data.length <= 1) return [];
-  // Skip header row (Slice 1) and map by Index
-  return data.slice(1).map(row => ({
-    id: row[0],
-    mapel: row[1],
-    materi: row[2],
-    kelas: row[3],
-    text_tujuan: row[4]
-  }));
+  return data.slice(1).map(row => ({ id: row[0], mapel: row[1], materi: row[2], kelas: row[3], text_tujuan: row[4] }));
 }
 
 function saveLearningObjective(obj) {
@@ -635,47 +562,30 @@ function saveLearningObjective(obj) {
 function deleteLearningObjective(id) {
   const sheet = getSheet(SHEET_TP);
   const data = sheet.getDataRange().getValues();
-  const targetId = String(id).trim(); // Strict check
-  for (let i = 1; i < data.length; i++) { 
-      if (String(data[i][0]).trim() === targetId) { 
-          sheet.deleteRow(i + 1); 
-          return { success: true }; 
-      } 
-  }
+  const targetId = String(id).trim(); 
+  for (let i = 1; i < data.length; i++) { if (String(data[i][0]).trim() === targetId) { sheet.deleteRow(i + 1); return { success: true }; } }
   return { success: false };
 }
 
 function importLearningObjectives(list) {
   const sheet = getSheet(SHEET_TP);
-  // Ensure strict string conversion to avoid null/undefined breaking setValues
-  const rows = list.map(o => [
-    String(o.id || ""), 
-    String(o.mapel || ""), 
-    String(o.materi || ""), 
-    String(o.kelas || ""), 
-    String(o.text_tujuan || "")
-  ]);
-  
-  if (rows.length > 0) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
-  }
+  const rows = list.map(o => [String(o.id || ""), String(o.mapel || ""), String(o.materi || ""), String(o.kelas || ""), String(o.text_tujuan || "")]);
+  if (rows.length > 0) sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   return { success: true };
 }
 
-// Updated to accept examType
 function assignTestGroup(usernames, examId, session, tpId, examType) {
   const sheet = getSheet(SHEET_USERS);
   const data = sheet.getDataRange().getValues();
   const userRowMap = {};
   for(let i=1; i<data.length; i++) userRowMap[data[i][1]] = i + 1;
-  
   usernames.forEach(u => {
     const row = userRowMap[u];
     if (row) {
       if (examId !== undefined && examId !== null) sheet.getRange(row, 11).setValue(examId); 
       if (session !== undefined && session !== null) sheet.getRange(row, 12).setValue(session);
-      if (tpId !== undefined && tpId !== null) sheet.getRange(row, 15).setValue(tpId); // ActiveTP Col 15
-      if (examType !== undefined && examType !== null) sheet.getRange(row, 16).setValue(examType); // ExamType Col 16
+      if (tpId !== undefined && tpId !== null) sheet.getRange(row, 15).setValue(tpId);
+      if (examType !== undefined && examType !== null) sheet.getRange(row, 16).setValue(examType);
     }
   });
   return { success: true };
@@ -719,6 +629,7 @@ function startExam(username, fullname, subject) {
   return { success: true, startTime: new Date().getTime() };
 }
 
+// UPDATED: Added examType as Col 9
 function submitAnswers(username, fullname, school, subject, answers, scoreInfo, startTime, qCount, qIds) {
   const rawQ = getRawQuestions(subject);
   let totalScore = 0;
@@ -730,17 +641,11 @@ function submitAnswers(username, fullname, school, subject, answers, scoreInfo, 
     const userAns = answers[q.id];
     let isCorrect = 0; 
     if (q.tipe_soal === 'PG') {
-      if (String(userAns || '').toUpperCase() === String(q.kunci_jawaban).toUpperCase()) {
-        totalScore += q.bobot;
-        isCorrect = 1;
-      }
+      if (String(userAns || '').toUpperCase() === String(q.kunci_jawaban).toUpperCase()) { totalScore += q.bobot; isCorrect = 1; }
     } else if (q.tipe_soal === 'PGK') {
        const keys = q.kunci_jawaban.split(',').map(s=>s.trim().toUpperCase()).sort().join(',');
        const ans = Array.isArray(userAns) ? userAns.map(s=>s.toUpperCase()).sort().join(',') : '';
-       if (keys === ans) {
-         totalScore += q.bobot;
-         isCorrect = 1;
-       }
+       if (keys === ans) { totalScore += q.bobot; isCorrect = 1; }
     } else if (q.tipe_soal === 'BS') {
        const keys = String(q.kunci_jawaban).toUpperCase().split(',').map(s=>s.trim());
        const ansObj = userAns || {};
@@ -749,15 +654,9 @@ function submitAnswers(username, fullname, school, subject, answers, scoreInfo, 
        for(let i=0; i<keys.length; i++) {
            const k = keys[i];
            const target = (k === 'B' || k === 'BENAR' || k === 'TRUE');
-           if (ansObj[slots[i]] !== target) {
-               match = false;
-               break;
-           }
+           if (ansObj[slots[i]] !== target) { match = false; break; }
        }
-       if (match && keys.length > 0) {
-           totalScore += q.bobot;
-           isCorrect = 1;
-       }
+       if (match && keys.length > 0) { totalScore += q.bobot; isCorrect = 1; }
     }
     analysisObj[q.id] = isCorrect;
   });
@@ -769,19 +668,43 @@ function submitAnswers(username, fullname, school, subject, answers, scoreInfo, 
   const m = Math.floor((durationSec % 3600) / 60).toString().padStart(2,'0');
   const s = (durationSec % 60).toString().padStart(2,'0');
   const durationStr = `${h}:${m}:${s}`;
-  sheet.appendRow([
-    new Date().toISOString(), username, fullname, school, subject,
-    roundedGrade, JSON.stringify(analysisObj), durationStr
-  ]);
-  const uSheet = getSheet(SHEET_USERS);
-  const uData = uSheet.getDataRange().getValues();
-  for(let i=1; i<uData.length; i++) {
-    if(uData[i][1] === username) {
-      uSheet.getRange(i+1, 13).setValue('FINISHED'); 
+  
+  // Get Exam Type from User Data to save in Result
+  const userSheet = getSheet(SHEET_USERS);
+  const userData = userSheet.getDataRange().getValues();
+  let examType = '';
+  for(let i=1; i<userData.length; i++) {
+    if(userData[i][1] === username) {
+      userSheet.getRange(i+1, 13).setValue('FINISHED'); 
+      examType = userData[i][15] || ''; // Col 16 = ExamType
       break;
     }
   }
+
+  sheet.appendRow([
+    new Date().toISOString(), username, fullname, school, subject,
+    roundedGrade, JSON.stringify(analysisObj), durationStr, examType
+  ]);
+  
   logActivity(username, 'FINISH', { subject: subject, score: roundedGrade });
+  return { success: true };
+}
+
+// --- NEW FUNCTION: SAVE EXTERNAL GRADES (Import/Manual) ---
+function saveExternalGrades(dataList) {
+  const sheet = getSheet(SHEET_EXTERNAL_GRADES);
+  const rows = dataList.map(d => [
+    (d.username + '_' + d.mapel + '_' + d.exam_type).replace(/\s/g, ''), // Unique ID generation
+    String(d.username || ''),
+    String(d.mapel || ''),
+    String(d.exam_type || ''),
+    String(d.nilai || 0),
+    new Date().toISOString()
+  ]);
+  
+  if (rows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  }
   return { success: true };
 }
 
@@ -792,33 +715,49 @@ function submitSurvey(username, fullname, school, surveyType, answers, startTime
     Object.values(answers).forEach(v => { total += Number(v); count++; });
     const avg = count > 0 ? (total / count).toFixed(2) : 0;
     const durationSec = Math.floor((new Date().getTime() - startTime) / 1000);
-    sheet.appendRow([
-        new Date().toISOString(), username, fullname, school, surveyType,
-        total, avg, JSON.stringify(answers), durationSec
-    ]);
+    sheet.appendRow([new Date().toISOString(), username, fullname, school, surveyType, total, avg, JSON.stringify(answers), durationSec]);
     const uSheet = getSheet(SHEET_USERS);
     const uData = uSheet.getDataRange().getValues();
-    for(let i=1; i<uData.length; i++) {
-        if(uData[i][1] === username) {
-             uSheet.getRange(i+1, 13).setValue('FINISHED'); 
-             break;
-        }
-    }
+    for(let i=1; i<uData.length; i++) { if(uData[i][1] === username) { uSheet.getRange(i+1, 13).setValue('FINISHED'); break; } }
     return { success: true };
 }
 
+// UPDATED: Fetch BOTH Results AND External Grades
 function getRecapData() {
-  const data = getData(SHEET_RESULTS);
-  return data.map(r => ({
-    timestamp: r.Timestamp, username: r.Username, nama: r.Nama,
-    sekolah: r.Sekolah, mapel: r.Mapel, nilai: r.Nilai,
-    analisis: r.AnalisisJSON, durasi: r.Durasi
+  const autoData = getData(SHEET_RESULTS);
+  const manualData = getData(SHEET_EXTERNAL_GRADES);
+  
+  const autoMapped = autoData.map(r => ({
+    type: 'auto',
+    timestamp: r.Timestamp, 
+    username: r.Username, 
+    nama: r.Nama,
+    sekolah: r.Sekolah, 
+    mapel: r.Mapel, 
+    nilai: r.Nilai,
+    analisis: r.AnalisisJSON, 
+    durasi: r.Durasi,
+    exam_type: r.JenisUjian || '' // Added
   }));
+
+  const manualMapped = manualData.map(r => ({
+    type: 'manual',
+    timestamp: r.Timestamp,
+    username: r.Username,
+    mapel: r.Mapel,
+    exam_type: r.ExamType,
+    nilai: r.Nilai,
+    sekolah: '', // Will be filled by frontend lookup
+    nama: '' // Will be filled by frontend lookup
+  }));
+
+  return [...autoMapped, ...manualMapped];
 }
 
 function getAnalysisData(subject) {
   const data = getRecapData();
-  return data.filter(d => d.mapel === subject);
+  // Only return automated results for analysis
+  return data.filter(d => d.type === 'auto' && d.mapel === subject);
 }
 
 function getDashboardData() {

@@ -224,10 +224,31 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
         }
     }
 
-    // Generate HTML String for Print
+    const dateNow = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // CSS Style Object for WYSIWYG
+    const styles = {
+        container: { fontFamily: 'Arial, sans-serif', fontSize: '9pt', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' as const },
+        headerTitle: { textAlign: 'center' as const, fontWeight: 'bold', fontSize: '14pt', marginBottom: '5px', textTransform: 'uppercase' as const, lineHeight: '1.2' },
+        headerSubtitle: { textAlign: 'center' as const, fontWeight: 'bold', fontSize: '12pt', marginBottom: '20px', textTransform: 'uppercase' as const, borderBottom: '3px double #000', paddingBottom: '10px' },
+        metaContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', fontSize: '9pt' },
+        metaTable: { fontSize: '9pt', width: '100%', marginBottom: '15px' },
+        metaTdLabel: { fontWeight: 'bold', width: '140px', padding: '2px 5px', verticalAlign: 'top' as const },
+        metaTdVal: { padding: '2px 5px', verticalAlign: 'top' as const },
+        dataTable: { width: '100%', borderCollapse: 'collapse' as const, marginBottom: '20px', fontSize: '9pt', tableLayout: 'auto' as const },
+        th: { backgroundColor: '#f0f0f0', border: '1px solid #000', padding: '4px 2px', textAlign: 'center' as const, fontWeight: 'bold' },
+        td: { border: '1px solid #000', padding: '3px', verticalAlign: 'middle' as const },
+        tdCenter: { border: '1px solid #000', padding: '3px', textAlign: 'center' as const, verticalAlign: 'middle' as const },
+        tdAns: { border: '1px solid #000', padding: '0', textAlign: 'center' as const, minWidth: '20px' },
+        footer: { display: 'flex', justifyContent: 'space-between', marginTop: '20px', fontSize: '11pt', pageBreakInside: 'avoid' as const },
+        sigBox: { textAlign: 'center' as const, width: '250px', lineHeight: '1.2' },
+        sigSpace: { height: '60px' },
+        sigName: { fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '11pt' },
+        sigNip: { fontSize: '10pt' }
+    };
+
+    // Generate HTML String for Print (Must match WYSIWYG component below)
     const generateHtmlReport = () => {
-        const dateNow = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        
         const tableHeaderCols = questionsData.map((q, i) => `<th class="col-ans">${i+1}</th>`).join('');
         
         const tableRows = rows.map((r, i) => {
@@ -275,7 +296,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                 <title>Analisis Hasil Asesmen Sumatif</title>
                 <style>
                     @page { size: A4 landscape; margin: 10mm; }
-                    body { font-family: 'Arial', sans-serif; padding: 0; margin: 0; font-size: 9px; color: #000; }
+                    body { font-family: 'Arial', sans-serif; padding: 0; margin: 0; font-size: 9pt; color: #000; }
                     .container { width: 100%; }
                     .header-title { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 5px; text-transform: uppercase; line-height: 1.2; }
                     .header-subtitle { text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 20px; text-transform: uppercase; border-bottom: 3px double #000; padding-bottom: 10px; }
@@ -284,13 +305,13 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                     .meta-label { font-weight: bold; width: 140px; white-space: nowrap; }
                     .tp-container { display: flex; align-items: flex-start; gap: 4px; }
                     .tp-desc { max-width: 550px; text-align: justify; line-height: 1.2; }
-                    table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9px; table-layout: auto; }
+                    table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9pt; table-layout: auto; }
                     table.data-table th, table.data-table td { border: 1px solid #000; padding: 3px; vertical-align: middle; }
                     table.data-table th { background-color: #f0f0f0; text-align: center; font-weight: bold; padding: 4px 2px; }
                     .col-no { width: 25px; text-align: center; }
                     .col-name { width: 140px; } 
                     .col-score { width: 35px; text-align: center; }
-                    .col-ans { width: 20px; min-width: 20px; max-width: 20px; text-align: center; font-size: 9px; padding: 0; overflow: hidden; }
+                    .col-ans { width: 20px; min-width: 20px; max-width: 20px; text-align: center; font-size: 9pt; padding: 0; overflow: hidden; }
                     .col-status { width: 60px; text-align: center; }
                     .col-rec { width: 60px; text-align: center; }
                     .footer { display: flex; justify-content: space-between; margin-top: 20px; page-break-inside: avoid; font-size: 11pt; }
@@ -389,7 +410,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                     </div>
                 </div>
 
-                {/* SIMPLIFIED Configuration Panel */}
+                {/* Configuration Panel */}
                 {showConfig && (
                     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 animate-in fade-in slide-in-from-top-2">
                         <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2"><FileText size={16}/> Filter & Atribut Laporan</h4>
@@ -423,12 +444,12 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                                     <p className="text-[9px] text-orange-500 mt-1 italic">* Tidak ada data TP untuk Mapel ini. Tambahkan di menu Data Laporan {'>'} Tujuan Pembelajaran.</p>
                                 )}
                             </div>
-                            {/* Materi Configuration - NOW DISABLED/READONLY */}
+                            {/* Materi Configuration */}
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Materi</label>
                                 <input type="text" readOnly className="w-full p-2 border border-slate-200 rounded-lg text-sm font-medium outline-none bg-slate-100 text-slate-600 cursor-not-allowed" value={materiInput} placeholder="Materi (Otomatis dari TP)" />
                             </div>
-                            {/* Class Filter - Auto Locked if TP Selected */}
+                            {/* Class Filter */}
                             {!isGuruClassLocked && (
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Filter Kelas Siswa</label>
@@ -447,7 +468,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                 )}
             </div>
 
-            {/* MAIN CONTENT AREA */}
+            {/* MAIN CONTENT AREA - PAPER SIMULATION */}
             {!selectedExam ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                     <Filter size={40} className="text-slate-300 mb-2"/>
@@ -476,36 +497,21 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
             ) : (
                 <div className="w-full bg-slate-200 p-4 md:p-8 rounded-xl border border-slate-300 overflow-auto flex justify-center">
                     {/* A4 Landscape Container Simulation */}
-                    <div 
-                        className="bg-white shadow-2xl text-black shrink-0 box-border"
-                        style={{ 
-                            width: '297mm', 
-                            minHeight: '210mm', 
-                            padding: '10mm',
-                            fontFamily: 'Arial, sans-serif'
-                        }}
-                    >
+                    <div style={styles.container} className="shadow-2xl text-black shrink-0 box-border p-[10mm] w-[297mm] min-h-[210mm]">
+                        
                         {/* 1. Header Title */}
-                        <div className="text-center mb-[5px]">
-                            <h2 style={{ fontSize: '14pt', fontWeight: 'bold', textTransform: 'uppercase', lineHeight: '1.2', margin: 0 }}>
-                                ANALISIS HASIL ASESMEN SUMATIF
-                            </h2>
-                        </div>
-                        <div className="text-center mb-[20px] pb-[10px]" style={{ borderBottom: '3px double #000' }}>
-                            <h3 style={{ fontSize: '12pt', fontWeight: 'bold', textTransform: 'uppercase', margin: 0 }}>
-                                {displaySchool}
-                            </h3>
-                        </div>
+                        <div style={styles.headerTitle}>ANALISIS HASIL ASESMEN SUMATIF</div>
+                        <div style={styles.headerSubtitle}>{displaySchool}</div>
 
                         {/* 2. Identity Meta Data */}
-                        <div className="flex justify-between items-start mb-[8px]" style={{ fontSize: '8pt' }}>
-                            <table style={{ borderCollapse: 'collapse', border: 'none' }}>
+                        <div style={styles.metaContainer}>
+                            <table style={styles.metaTable}>
                                 <tbody>
-                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Jenis Ujian</td><td style={{ padding: '2px 5px' }}>: {displayJenisUjian}</td></tr>
-                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Mata Pelajaran</td><td style={{ padding: '2px 5px' }}>: {displayMapel}</td></tr>
+                                    <tr><td style={styles.metaTdLabel}>Jenis Ujian</td><td style={styles.metaTdVal}>: {displayJenisUjian}</td></tr>
+                                    <tr><td style={styles.metaTdLabel}>Mata Pelajaran</td><td style={styles.metaTdVal}>: {displayMapel}</td></tr>
                                     <tr>
-                                        <td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px', verticalAlign: 'top' }}>Tujuan Pembelajaran</td>
-                                        <td style={{ padding: '2px 5px' }}>
+                                        <td style={styles.metaTdLabel}>Tujuan Pembelajaran</td>
+                                        <td style={styles.metaTdVal}>
                                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
                                                 <span>:</span>
                                                 <div style={{ maxWidth: '550px', textAlign: 'justify', lineHeight: '1.2' }}>{tpInput || '-'}</div>
@@ -514,65 +520,65 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                                     </tr>
                                 </tbody>
                             </table>
-                            <table style={{ borderCollapse: 'collapse', border: 'none' }}>
+                            <table style={styles.metaTable}>
                                 <tbody>
-                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Materi</td><td style={{ padding: '2px 5px' }}>: {materiInput || '-'}</td></tr>
-                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Kelas / Semester</td><td style={{ padding: '2px 5px' }}>: {displayKelas} / {displaySemester}</td></tr>
-                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Tahun Ajaran</td><td style={{ padding: '2px 5px' }}>: {displayTahun}</td></tr>
+                                    <tr><td style={styles.metaTdLabel}>Materi</td><td style={styles.metaTdVal}>: {materiInput || '-'}</td></tr>
+                                    <tr><td style={styles.metaTdLabel}>Kelas / Semester</td><td style={styles.metaTdVal}>: {displayKelas} / {displaySemester}</td></tr>
+                                    <tr><td style={styles.metaTdLabel}>Tahun Ajaran</td><td style={styles.metaTdVal}>: {displayTahun}</td></tr>
                                 </tbody>
                             </table>
                         </div>
 
                         {/* 3. Table */}
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '9px', tableLayout: 'auto' }}>
-                                <thead style={{ backgroundColor: '#f0f0f0', textAlign: 'center', fontWeight: 'bold' }}>
+                            <table style={styles.dataTable}>
+                                <thead>
                                     <tr>
-                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '25px' }} rowSpan={2}>No</th>
-                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '140px' }} rowSpan={2}>Nama Murid</th>
-                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '35px' }} rowSpan={2}>Nilai</th>
-                                        <th style={{ border: '1px solid #000', padding: '4px 2px' }} colSpan={questionsData.length}>Analisis Butir Soal</th>
-                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '60px' }} rowSpan={2}>Ketuntasan</th>
-                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '60px' }} rowSpan={2}>Rekomendasi</th>
+                                        <th style={{ ...styles.th, width: '25px' }} rowSpan={2}>No</th>
+                                        <th style={{ ...styles.th, width: '140px' }} rowSpan={2}>Nama Peserta Didik</th>
+                                        <th style={{ ...styles.th, width: '35px' }} rowSpan={2}>Nilai</th>
+                                        <th style={styles.th} colSpan={questionsData.length}>Analisis Butir Soal</th>
+                                        <th style={{ ...styles.th, width: '60px' }} rowSpan={2}>Ketuntasan</th>
+                                        <th style={{ ...styles.th, width: '60px' }} rowSpan={2}>Rekomendasi</th>
                                     </tr>
                                     <tr>
                                         {questionsData.map((q, idx) => (
-                                            <th key={q.id} style={{ border: '1px solid #000', padding: '2px', width: '20px', fontSize: '9px' }} title={q.text_soal}>{idx + 1}</th>
+                                            <th key={q.id} style={{ ...styles.th, width: '20px', fontSize: '9pt' }} title={q.text_soal}>{idx + 1}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {rows.map((d, i) => (
                                         <tr key={i}>
-                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{i + 1}</td>
-                                            <td style={{ border: '1px solid #000', padding: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>{d.nama}</td>
-                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{d.score}</td>
+                                            <td style={styles.tdCenter}>{i + 1}</td>
+                                            <td style={{ ...styles.td, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>{d.nama}</td>
+                                            <td style={styles.tdCenter}>{d.score}</td>
                                             {questionsData.map(q => {
                                                 const val = d.ansMap[q.id];
                                                 const bg = val === 1 ? '#d1fae5' : val === 0 ? '#fee2e2' : '#ffffff';
-                                                return (<td key={q.id} style={{ border: '1px solid #000', padding: '0', textAlign: 'center', backgroundColor: bg, minWidth: '20px' }}>{val === 1 ? '1' : val === 0 ? '0' : '-'}</td>);
+                                                return (<td key={q.id} style={{ ...styles.tdAns, backgroundColor: bg }}>{val === 1 ? '1' : val === 0 ? '0' : '-'}</td>);
                                             })}
-                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', fontWeight: 'bold', color: d.isTuntas ? 'green' : 'red' }}>{d.ketuntasan}</td>
-                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', color: d.isTuntas ? 'blue' : 'orange' }}>{d.rekomendasi}</td>
+                                            <td style={{ ...styles.tdCenter, fontWeight: 'bold', color: d.isTuntas ? 'green' : 'red' }}>{d.ketuntasan}</td>
+                                            <td style={{ ...styles.tdCenter, color: d.isTuntas ? 'blue' : 'orange' }}>{d.rekomendasi}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                                 <tfoot style={{ backgroundColor: '#f9fafb', fontWeight: 'bold' }}>
                                     <tr>
                                         <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Jumlah Benar</td>
-                                        {questionsData.map(q => <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center' }}>{questionStats[q.id].correct}</td>)}
+                                        {questionsData.map(q => <td key={q.id} style={styles.tdCenter}>{questionStats[q.id].correct}</td>)}
                                         <td colSpan={2} style={{ border: '1px solid #000' }}></td>
                                     </tr>
                                     <tr>
                                         <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Jumlah Salah</td>
-                                        {questionsData.map(q => <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center', color: 'red' }}>{questionStats[q.id].total - questionStats[q.id].correct}</td>)}
+                                        {questionsData.map(q => <td key={q.id} style={{ ...styles.tdCenter, color: 'red' }}>{questionStats[q.id].total - questionStats[q.id].correct}</td>)}
                                         <td colSpan={2} style={{ border: '1px solid #000' }}></td>
                                     </tr>
                                     <tr>
                                         <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Prosentase Benar</td>
                                         {questionsData.map(q => {
                                             const percent = questionStats[q.id].total > 0 ? Math.round((questionStats[q.id].correct / questionStats[q.id].total) * 100) : 0;
-                                            return <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center' }}>{percent}%</td>
+                                            return <td key={q.id} style={styles.tdCenter}>{percent}%</td>
                                         })}
                                         <td colSpan={2} style={{ border: '1px solid #000' }}></td>
                                     </tr>
@@ -583,7 +589,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                                             let label = "Sd", color = "blue";
                                             if (percent > 70) { label = "M"; color = "green"; }
                                             else if (percent < 30) { label = "S"; color = "red"; }
-                                            return <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center', color: color }}>{label}</td>
+                                            return <td key={q.id} style={{ ...styles.tdCenter, color: color }}>{label}</td>
                                         })}
                                         <td colSpan={2} style={{ border: '1px solid #000' }}></td>
                                     </tr>
@@ -592,20 +598,20 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                         </div>
 
                         {/* 4. Signature Section */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', fontSize: '8pt', pageBreakInside: 'avoid' }}>
-                            <div style={{ textAlign: 'center', width: '250px', lineHeight: '1.2' }}>
+                        <div style={styles.footer}>
+                            <div style={styles.sigBox}>
                                 <p style={{ margin: 0 }}>Mengetahui,</p>
                                 <p style={{ margin: 0 }}>Kepala Sekolah</p>
-                                <div style={{ height: '40px' }}></div>
-                                <p style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '8pt' }}>{kepSekName}</p>
-                                <p style={{ fontSize: '8pt', margin: 0 }}>NIP. {kepSekNip}</p>
+                                <div style={styles.sigSpace}></div>
+                                <p style={styles.sigName}>{kepSekName}</p>
+                                <p style={styles.sigNip}>NIP. {kepSekNip}</p>
                             </div>
-                            <div style={{ textAlign: 'center', width: '250px', lineHeight: '1.2' }}>
-                                <p style={{ margin: 0 }}>Tuban, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <div style={styles.sigBox}>
+                                <p style={{ margin: 0 }}>Tuban, {dateNow}</p>
                                 <p style={{ margin: 0 }}>{guruJabatan}</p>
-                                <div style={{ height: '40px' }}></div>
-                                <p style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '8pt' }}>{guruName}</p>
-                                <p style={{ fontSize: '8pt', margin: 0 }}>NIP. {guruNip}</p>
+                                <div style={styles.sigSpace}></div>
+                                <p style={styles.sigName}>{guruName}</p>
+                                <p style={styles.sigNip}>NIP. {guruNip}</p>
                             </div>
                         </div>
                     </div>
