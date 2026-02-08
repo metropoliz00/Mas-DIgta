@@ -37,9 +37,21 @@ function App() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [appConfig, setAppConfig] = useState<Record<string, string>>({});
   
-  // Load Global Config on Mount (For Login Logo)
+  // Load Global Config on Mount (For Login Logo & Favicon)
   useEffect(() => {
-      api.getAppConfig().then(setAppConfig).catch(console.error);
+      api.getAppConfig().then(config => {
+          setAppConfig(config);
+          // Set Favicon dynamically
+          if (config['LOGO_SEKOLAH']) {
+             let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+             if (!link) {
+                 link = document.createElement('link');
+                 link.rel = 'icon';
+                 document.head.appendChild(link);
+             }
+             link.href = config['LOGO_SEKOLAH'];
+          }
+      }).catch(console.error);
   }, []);
 
   // Restore Session
