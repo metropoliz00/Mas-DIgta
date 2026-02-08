@@ -24,7 +24,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     const [tpId, setTpId] = useState(''); // ID TP Selection
     const [tpInput, setTpInput] = useState(''); // Deskripsi TP
     const [materiInput, setMateriInput] = useState(''); // Materi
-    const [kktp, setKktp] = useState(75); // KKTP Logic (Default 75)
+    const [kktp, setKktp] = useState(75); // KKTP Logic (Default 75) - Hidden from UI
     const [showConfig, setShowConfig] = useState(true); // Default open to encourage selection
 
     // Helper Maps
@@ -200,37 +200,34 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     const isConfigComplete = selectedExam && tpId && tpInput;
     const isGuruClassLocked = currentUser.role === 'Guru' && currentUser.kelas && currentUser.kelas !== '-';
 
+    // Helper variables for UI and Print
+    const representativeStudent = rows.length > 0 ? userMap[rows[0].username] : null;
+    const displayJenisUjian = representativeStudent?.exam_type || '-';
+    const displaySchool = globalConfig['SCHOOL_NAME'] || (representativeStudent?.school) || '...........................';
+    const displayMapel = exams.find(e => e.id === selectedExam)?.nama_ujian || selectedExam;
+    const displayKelas = filterClass !== 'all' ? filterClass : 'Semua Kelas';
+    const displaySemester = globalConfig['SEMESTER'] || '1 (Ganjil)';
+    const displayTahun = globalConfig['ACADEMIC_YEAR'] || '2025/2026';
+
+    // Signature Variables (Sync with Print logic)
+    const kepSekName = globalConfig['PRINCIPAL_NAME'] || '...........................';
+    const kepSekNip = globalConfig['PRINCIPAL_NIP'] || '-';
+    let guruName = globalConfig['TEACHER_NAME'] || '...........................';
+    let guruNip = globalConfig['TEACHER_NIP'] || '-';
+    let guruJabatan = globalConfig['TEACHER_POSITION'] || 'Guru Kelas';
+
+    if (currentUser.role === 'Guru') {
+        guruName = currentUser.nama_lengkap;
+        guruNip = currentUser.username;
+        if (!globalConfig['TEACHER_POSITION'] && currentUser.kelas && currentUser.kelas !== '-') {
+            guruJabatan = `Guru Kelas ${currentUser.kelas}`;
+        }
+    }
+
     // Generate HTML String for Print
     const generateHtmlReport = () => {
         const dateNow = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        const examName = exams.find(e => e.id === selectedExam)?.nama_ujian || selectedExam;
         
-        // --- FETCH DATA FROM GLOBAL/USER CONFIG ---
-        const schoolName = globalConfig['SCHOOL_NAME'] || '...........................';
-        const kepSek = globalConfig['PRINCIPAL_NAME'] || '...........................';
-        const nipKepSek = globalConfig['PRINCIPAL_NIP'] || '-';
-        
-        // LOGIC TANDA TANGAN (SESUAI USER LOGIN UNTUK GURU)
-        let guru = globalConfig['TEACHER_NAME'] || '...........................';
-        let nipGuru = globalConfig['TEACHER_NIP'] || '-';
-        let jabatan = globalConfig['TEACHER_POSITION'] || 'Guru Kelas';
-
-        if (currentUser.role === 'Guru') {
-            guru = currentUser.nama_lengkap;
-            nipGuru = currentUser.username;
-            
-            // Use specific teacher position from config if available, otherwise auto-generate
-            if (!globalConfig['TEACHER_POSITION'] && currentUser.kelas && currentUser.kelas !== '-') {
-                jabatan = `Guru Kelas ${currentUser.kelas}`;
-            }
-        }
-
-        const tahunAjaran = globalConfig['ACADEMIC_YEAR'] || '2025/2026';
-        const semester = globalConfig['SEMESTER'] || '1 (Ganjil)';
-        
-        // Smart Class Name Logic for Print: RAW DATA WITHOUT PREFIX
-        const className = filterClass !== 'all' ? filterClass : 'Semua Kelas';
-
         const tableHeaderCols = questionsData.map((q, i) => `<th class="col-ans">${i+1}</th>`).join('');
         
         const tableRows = rows.map((r, i) => {
@@ -275,93 +272,52 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Analisis Hasil Asesmen</title>
+                <title>Analisis Hasil Asesmen Sumatif</title>
                 <style>
                     @page { size: A4 landscape; margin: 10mm; }
                     body { font-family: 'Arial', sans-serif; padding: 0; margin: 0; font-size: 9px; color: #000; }
                     .container { width: 100%; }
-                    
-                    /* Header Styles */
                     .header-title { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 5px; text-transform: uppercase; line-height: 1.2; }
                     .header-subtitle { text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 20px; text-transform: uppercase; border-bottom: 3px double #000; padding-bottom: 10px; }
-                    
-                    /* UPDATED: Font size set to 9pt for identity header */
                     .meta-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; font-size: 9pt; }
-                    
                     .meta-table td { padding: 2px 5px; vertical-align: top; }
                     .meta-label { font-weight: bold; width: 140px; white-space: nowrap; }
-                    
-                    /* TP Description Wrapper */
                     .tp-container { display: flex; align-items: flex-start; gap: 4px; }
-                    .tp-desc {
-                        max-width: 550px;
-                        display: -webkit-box;
-                        -webkit-line-clamp: 3;
-                        -webkit-box-orient: vertical;
-                        overflow: hidden;
-                        line-height: 1.2;
-                        text-align: justify;
-                    }
-                    
-                    /* Table Styles - Font Size 9px Enforcement */
+                    .tp-desc { max-width: 550px; text-align: justify; line-height: 1.2; }
                     table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9px; table-layout: auto; }
                     table.data-table th, table.data-table td { border: 1px solid #000; padding: 3px; vertical-align: middle; }
                     table.data-table th { background-color: #f0f0f0; text-align: center; font-weight: bold; padding: 4px 2px; }
-                    
-                    /* Column Sizing */
                     .col-no { width: 25px; text-align: center; }
                     .col-name { width: 140px; } 
                     .col-score { width: 35px; text-align: center; }
-                    
-                    .col-ans { 
-                        width: 20px; 
-                        min-width: 20px; 
-                        max-width: 20px; 
-                        text-align: center; 
-                        font-size: 9px; 
-                        padding: 0;
-                        overflow: hidden;
-                    }
-                    
+                    .col-ans { width: 20px; min-width: 20px; max-width: 20px; text-align: center; font-size: 9px; padding: 0; overflow: hidden; }
                     .col-status { width: 60px; text-align: center; }
                     .col-rec { width: 60px; text-align: center; }
-                    
-                    /* Footer */
                     .footer { display: flex; justify-content: space-between; margin-top: 20px; page-break-inside: avoid; font-size: 11pt; }
                     .signature-box { text-align: center; width: 250px; line-height: 1.2; }
                     .signature-box p { margin: 0; }
                     .signature-space { height: 60px; }
                     .sig-name { font-weight: bold; font-size: 11pt; margin-bottom: 2px; text-decoration: underline; } 
                     .sig-nip { font-size: 10pt; }
-                    
                     .bg-gray { background-color: #f9fafb; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header-title">Analisis Hasil Asesmen Sumatif</div>
-                    <div class="header-subtitle">${schoolName}</div>
-                    
+                    <div class="header-subtitle">${displaySchool}</div>
                     <div class="meta-container">
                         <table class="meta-table">
-                            <tr><td class="meta-label">Mata Pelajaran</td><td>: ${examName}</td></tr>
-                            <tr><td class="meta-label">Materi</td><td>: ${materiInput || '-'}</td></tr>
-                            <tr>
-                                <td class="meta-label">Tujuan Pembelajaran</td>
-                                <td>
-                                    <div class="tp-container">
-                                        <span>:</span>
-                                        <div class="tp-desc">${tpInput || '-'}</div>
-                                    </div>
-                                </td>
-                            </tr>
+                            <tr><td class="meta-label">Jenis Ujian</td><td>: ${displayJenisUjian}</td></tr>
+                            <tr><td class="meta-label">Mata Pelajaran</td><td>: ${displayMapel}</td></tr>
+                            <tr><td class="meta-label">Tujuan Pembelajaran</td><td><div class="tp-container"><span>:</span><div class="tp-desc">${tpInput || '-'}</div></div></td></tr>
                         </table>
                         <table class="meta-table">
-                            <tr><td class="meta-label">Kelas / Semester</td><td>: ${className} / ${semester}</td></tr>
-                            <tr><td class="meta-label">Tahun Ajaran</td><td>: ${tahunAjaran}</td></tr>
+                            <tr><td class="meta-label">Materi</td><td>: ${materiInput || '-'}</td></tr>
+                            <tr><td class="meta-label">Kelas / Semester</td><td>: ${displayKelas} / ${displaySemester}</td></tr>
+                            <tr><td class="meta-label">Tahun Ajaran</td><td>: ${displayTahun}</td></tr>
                         </table>
                     </div>
-
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -372,13 +328,9 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                                 <th class="col-status" rowspan="2">Ketuntasan</th>
                                 <th class="col-rec" rowspan="2">Rekomendasi</th>
                             </tr>
-                            <tr>
-                                ${tableHeaderCols}
-                            </tr>
+                            <tr>${tableHeaderCols}</tr>
                         </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
+                        <tbody>${tableRows}</tbody>
                         <tfoot>
                             <tr class="bg-gray"><td colspan="3" class="text-align:right font-bold" style="text-align:right; padding-right:10px;">Jumlah Benar</td>${correctRow}<td colspan="2"></td></tr>
                             <tr class="bg-gray"><td colspan="3" class="text-align:right font-bold" style="text-align:right; padding-right:10px;">Jumlah Salah</td>${incorrectRow}<td colspan="2"></td></tr>
@@ -386,21 +338,14 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                             <tr class="bg-gray"><td colspan="3" class="text-align:right font-bold" style="text-align:right; padding-right:10px;">Tingkat Kesukaran</td>${diffRow}<td colspan="2"></td></tr>
                         </tfoot>
                     </table>
-
                     <div class="footer">
                         <div class="signature-box">
-                            <p>Mengetahui,</p>
-                            <p>Kepala Sekolah</p>
-                            <div class="signature-space"></div>
-                            <p class="sig-name">${kepSek}</p>
-                            <p class="sig-nip">NIP. ${nipKepSek}</p>
+                            <p>Mengetahui,</p><p>Kepala Sekolah</p><div class="signature-space"></div>
+                            <p class="sig-name">${kepSekName}</p><p class="sig-nip">NIP. ${kepSekNip}</p>
                         </div>
                         <div class="signature-box">
-                            <p>Tuban, ${dateNow}</p>
-                            <p>${jabatan}</p>
-                            <div class="signature-space"></div>
-                            <p class="sig-name">${guru}</p>
-                            <p class="sig-nip">NIP. ${nipGuru}</p>
+                            <p>Tuban, ${dateNow}</p><p>${guruJabatan}</p><div class="signature-space"></div>
+                            <p class="sig-name">${guruName}</p><p class="sig-nip">NIP. ${guruNip}</p>
                         </div>
                     </div>
                 </div>
@@ -427,19 +372,15 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                         <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><BarChart3 size={20} className="text-indigo-600"/> Analisis Hasil Asesmen</h3>
                         <p className="text-xs text-slate-400">Pilih Ujian dan TP untuk melihat analisis butir soal.</p>
                     </div>
-                    
                     <div className="flex flex-wrap gap-2 items-center">
                         <button onClick={() => setShowConfig(!showConfig)} className={`p-2.5 rounded-lg border transition flex items-center gap-2 text-xs font-bold ${showConfig ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'} ${!isConfigComplete && selectedExam ? 'animate-pulse ring-2 ring-indigo-300' : ''}`}>
                             <Settings size={16}/> Konfigurasi
                         </button>
-                        
                         <div className="h-8 w-px bg-slate-200 mx-1"></div>
-
                         <select className="p-2 border border-slate-200 rounded-lg text-sm font-bold bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-100 min-w-[200px]" value={selectedExam} onChange={e => setSelectedExam(e.target.value)}>
                             <option value="">-- Pilih Mapel / Ujian --</option>
                             {exams.map(e => <option key={e.id} value={e.id}>{e.nama_ujian}</option>)}
                         </select>
-                        
                         {isConfigComplete && rows.length > 0 && (
                             <button onClick={handlePrint} className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 active:scale-95">
                                 <Printer size={16}/> Cetak
@@ -453,38 +394,27 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 animate-in fade-in slide-in-from-top-2">
                         <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2"><FileText size={16}/> Filter & Atribut Laporan</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            
                             {/* TP Configuration */}
                             <div className="lg:col-span-2">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Tujuan Pembelajaran (TP)</label>
                                 <div className="flex gap-2">
                                     <div className="relative w-1/3">
                                         <Target className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                                        <select 
-                                            className="w-full pl-8 p-2 border border-slate-200 rounded-lg text-sm font-bold focus:border-indigo-500 outline-none bg-white truncate cursor-pointer text-indigo-700"
-                                            value={tpId}
-                                            onChange={(e) => {
+                                        <select className="w-full pl-8 p-2 border border-slate-200 rounded-lg text-sm font-bold focus:border-indigo-500 outline-none bg-white truncate cursor-pointer text-indigo-700" value={tpId} onChange={(e) => {
                                                 const id = e.target.value;
                                                 setTpId(id);
                                                 const selected = tps.find(t => t.id === id);
                                                 if (selected) {
                                                     setTpInput(selected.text_tujuan);
                                                     if(selected.materi) setMateriInput(selected.materi);
-                                                    // Auto Lock Filter Kelas based on TP
                                                     if(selected.kelas) setFilterClass(selected.kelas);
                                                 } else {
-                                                    setTpInput('');
-                                                    setMateriInput('');
-                                                    // Reset class if not locked by Guru
+                                                    setTpInput(''); setMateriInput('');
                                                     if (!isGuruClassLocked) setFilterClass('all');
                                                 }
-                                            }}
-                                            disabled={!selectedExam}
-                                        >
+                                            }} disabled={!selectedExam}>
                                             <option value="">Pilih ID TP</option>
-                                            {relevantTps.map(t => (
-                                                <option key={t.id} value={t.id}>{t.id}</option>
-                                            ))}
+                                            {relevantTps.map(t => (<option key={t.id} value={t.id}>{t.id}</option>))}
                                         </select>
                                     </div>
                                     <input type="text" readOnly className="w-2/3 p-2 border border-slate-200 rounded-lg text-sm font-medium focus:border-indigo-500 outline-none bg-slate-100 text-slate-600 cursor-not-allowed" value={tpInput} placeholder="Deskripsi TP (Otomatis)" />
@@ -493,36 +423,18 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                                     <p className="text-[9px] text-orange-500 mt-1 italic">* Tidak ada data TP untuk Mapel ini. Tambahkan di menu Data Laporan {'>'} Tujuan Pembelajaran.</p>
                                 )}
                             </div>
-
                             {/* Materi Configuration - NOW DISABLED/READONLY */}
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Materi</label>
-                                <input 
-                                    type="text" 
-                                    readOnly
-                                    className="w-full p-2 border border-slate-200 rounded-lg text-sm font-medium outline-none bg-slate-100 text-slate-600 cursor-not-allowed" 
-                                    value={materiInput} 
-                                    placeholder="Materi (Otomatis dari TP)" 
-                                />
+                                <input type="text" readOnly className="w-full p-2 border border-slate-200 rounded-lg text-sm font-medium outline-none bg-slate-100 text-slate-600 cursor-not-allowed" value={materiInput} placeholder="Materi (Otomatis dari TP)" />
                             </div>
-
                             {/* Class Filter - Auto Locked if TP Selected */}
                             {!isGuruClassLocked && (
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Filter Kelas Siswa</label>
-                                    <select 
-                                        className={`w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 bg-white ${tpId ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
-                                        value={filterClass} 
-                                        onChange={e => setFilterClass(e.target.value)}
-                                        disabled={!!tpId}
-                                    >
+                                    <select className={`w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 bg-white ${tpId ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`} value={filterClass} onChange={e => setFilterClass(e.target.value)} disabled={!!tpId}>
                                         <option value="all">Semua Kelas</option>
-                                        {uniqueClasses.map((s:any) => (
-                                            <option key={s} value={s}>
-                                                {/* Raw value from DB without additional text */}
-                                                {s}
-                                            </option>
-                                        ))}
+                                        {uniqueClasses.map((s:any) => (<option key={s} value={s}>{s}</option>))}
                                     </select>
                                     {tpId && <p className="text-[9px] text-indigo-500 mt-0.5 italic flex items-center gap-1">* Terkunci sesuai ID TP</p>}
                                 </div>
@@ -535,14 +447,13 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                 )}
             </div>
 
-            {/* MAIN CONTENT AREA - CONDITIONALLY RENDERED */}
+            {/* MAIN CONTENT AREA */}
             {!selectedExam ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                     <Filter size={40} className="text-slate-300 mb-2"/>
                     <p className="text-slate-400 font-medium">Pilih Ujian (Mata Pelajaran) terlebih dahulu.</p>
                 </div>
             ) : !isConfigComplete ? (
-                // BLOCKING VIEW IF TP IS NOT SELECTED
                 <div className="flex flex-col items-center justify-center py-20 bg-orange-50 rounded-2xl border-2 border-orange-100">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
                         <Target size={32} className="text-orange-500"/>
@@ -563,90 +474,140 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                     <p className="text-slate-400 font-medium">Belum ada data nilai masuk untuk filter ini.</p>
                 </div>
             ) : (
-                <div className="relative border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto custom-scrollbar">
-                        {/* Requirement: Font Size 9px */}
-                        <table className="w-full text-left whitespace-nowrap" style={{ fontFamily: 'Arial', fontSize: '9px' }}>
-                            <thead className="bg-slate-50 font-bold text-slate-600 uppercase sticky top-0 z-20 shadow-sm" style={{ fontSize: '9px' }}>
-                                <tr>
-                                    <th className="p-3 w-10 text-center border-r border-slate-200 bg-slate-50" rowSpan={2}>No</th>
-                                    <th className="p-3 sticky left-0 bg-slate-50 z-30 border-r border-slate-200 min-w-[150px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" rowSpan={2}>Nama Murid</th>
-                                    <th className="p-3 border-r border-slate-200 text-center bg-indigo-50 text-indigo-700 w-16 border-b border-indigo-100" rowSpan={2}>Nilai</th>
-                                    <th className="p-3 border-r border-slate-200 text-center bg-slate-100 border-b border-slate-200" colSpan={questionsData.length}>Analisis Butir Soal</th>
-                                    <th className="p-3 border-r border-slate-200 text-center bg-emerald-50 text-emerald-700 w-24 border-b border-emerald-100" rowSpan={2}>Ketuntasan</th>
-                                    <th className="p-3 text-center bg-blue-50 text-blue-700 w-24 border-b border-blue-100" rowSpan={2}>Rekomendasi</th>
-                                </tr>
-                                <tr>
-                                    {questionsData.map((q, idx) => (
-                                        <th key={q.id} className="p-2 text-center w-10 min-w-[40px] border-r border-slate-100 bg-white" title={q.text_soal}>
-                                            {idx + 1}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {rows.map((d, i) => (
-                                    <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-2 text-center text-slate-500 border-r border-slate-100">{i + 1}</td>
-                                        <td className="p-2 font-bold text-slate-700 sticky left-0 bg-white border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] truncate max-w-[150px]">
-                                            {d.nama}
-                                            <div className="text-[9px] text-slate-400 font-normal">{d.username}</div>
-                                        </td>
-                                        <td className="p-2 font-black text-center text-indigo-600 bg-indigo-50/20 border-r border-slate-100">{d.score}</td>
-                                        
-                                        {questionsData.map(q => {
-                                            const val = d.ansMap[q.id];
-                                            let cellClass = "bg-slate-50 text-slate-300"; 
-                                            if (val === 1) cellClass = "bg-emerald-100 text-emerald-700";
-                                            else if (val === 0) cellClass = "bg-rose-100 text-rose-700";
-                                            return (
-                                                <td key={q.id} className={`p-1 text-center font-bold border-r border-slate-50 w-10 min-w-[40px] ${cellClass}`}>
-                                                    {val === 1 ? '1' : val === 0 ? '0' : '-'}
-                                                </td>
-                                            );
-                                        })}
+                <div className="w-full bg-slate-200 p-4 md:p-8 rounded-xl border border-slate-300 overflow-auto flex justify-center">
+                    {/* A4 Landscape Container Simulation */}
+                    <div 
+                        className="bg-white shadow-2xl text-black shrink-0 box-border"
+                        style={{ 
+                            width: '297mm', 
+                            minHeight: '210mm', 
+                            padding: '10mm',
+                            fontFamily: 'Arial, sans-serif'
+                        }}
+                    >
+                        {/* 1. Header Title */}
+                        <div className="text-center mb-[5px]">
+                            <h2 style={{ fontSize: '14pt', fontWeight: 'bold', textTransform: 'uppercase', lineHeight: '1.2', margin: 0 }}>
+                                ANALISIS HASIL ASESMEN SUMATIF
+                            </h2>
+                        </div>
+                        <div className="text-center mb-[20px] pb-[10px]" style={{ borderBottom: '3px double #000' }}>
+                            <h3 style={{ fontSize: '12pt', fontWeight: 'bold', textTransform: 'uppercase', margin: 0 }}>
+                                {displaySchool}
+                            </h3>
+                        </div>
 
-                                        <td className={`p-2 text-center font-bold text-[9px] border-r border-slate-100 ${d.isTuntas ? 'text-emerald-600 bg-emerald-50/20' : 'text-rose-600 bg-rose-50/20'}`}>
-                                            {d.ketuntasan}
-                                        </td>
-                                        <td className={`p-2 text-center font-bold text-[9px] ${d.isTuntas ? 'text-blue-600' : 'text-orange-600'}`}>
-                                            {d.rekomendasi}
+                        {/* 2. Identity Meta Data */}
+                        <div className="flex justify-between items-start mb-[8px]" style={{ fontSize: '8pt' }}>
+                            <table style={{ borderCollapse: 'collapse', border: 'none' }}>
+                                <tbody>
+                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Jenis Ujian</td><td style={{ padding: '2px 5px' }}>: {displayJenisUjian}</td></tr>
+                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Mata Pelajaran</td><td style={{ padding: '2px 5px' }}>: {displayMapel}</td></tr>
+                                    <tr>
+                                        <td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px', verticalAlign: 'top' }}>Tujuan Pembelajaran</td>
+                                        <td style={{ padding: '2px 5px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                                                <span>:</span>
+                                                <div style={{ maxWidth: '550px', textAlign: 'justify', lineHeight: '1.2' }}>{tpInput || '-'}</div>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                            <tfoot className="bg-slate-50 font-bold text-slate-600 text-[9px] shadow-[0_-2px_5px_rgba(0,0,0,0.05)]">
-                                <tr className="border-t border-slate-200">
-                                    <td colSpan={3} className="p-2 text-right border-r border-slate-200">Jumlah Benar</td>
-                                    {questionsData.map(q => <td key={q.id} className="p-2 text-center border-r border-slate-200">{questionStats[q.id].correct}</td>)}
-                                    <td colSpan={2} className="bg-slate-100"></td>
-                                </tr>
-                                <tr className="border-t border-slate-200">
-                                    <td colSpan={3} className="p-2 text-right border-r border-slate-200">Jumlah Salah</td>
-                                    {questionsData.map(q => <td key={q.id} className="p-2 text-center border-r border-slate-200 text-rose-500">{questionStats[q.id].total - questionStats[q.id].correct}</td>)}
-                                    <td colSpan={2} className="bg-slate-100"></td>
-                                </tr>
-                                <tr className="border-t border-slate-200">
-                                    <td colSpan={3} className="p-2 text-right border-r border-slate-200">Prosentase Benar</td>
-                                    {questionsData.map(q => {
-                                        const percent = questionStats[q.id].total > 0 ? Math.round((questionStats[q.id].correct / questionStats[q.id].total) * 100) : 0;
-                                        return <td key={q.id} className="p-2 text-center border-r border-slate-200">{percent}%</td>
-                                    })}
-                                    <td colSpan={2} className="bg-slate-100"></td>
-                                </tr>
-                                <tr className="border-t border-slate-200 bg-slate-100">
-                                    <td colSpan={3} className="p-2 text-right border-r border-slate-200">Tingkat Kesukaran</td>
-                                    {questionsData.map(q => {
-                                        const percent = questionStats[q.id].total > 0 ? Math.round((questionStats[q.id].correct / questionStats[q.id].total) * 100) : 0;
-                                        let label = "Sd", color = "text-blue-600";
-                                        if (percent > 70) { label = "M"; color = "text-emerald-600"; }
-                                        else if (percent < 30) { label = "S"; color = "text-rose-600"; }
-                                        return <td key={q.id} className={`p-2 text-center border-r border-slate-200 ${color}`}>{label}</td>
-                                    })}
-                                    <td colSpan={2} className="bg-slate-100"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                </tbody>
+                            </table>
+                            <table style={{ borderCollapse: 'collapse', border: 'none' }}>
+                                <tbody>
+                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Materi</td><td style={{ padding: '2px 5px' }}>: {materiInput || '-'}</td></tr>
+                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Kelas / Semester</td><td style={{ padding: '2px 5px' }}>: {displayKelas} / {displaySemester}</td></tr>
+                                    <tr><td style={{ fontWeight: 'bold', width: '100px', padding: '2px 5px' }}>Tahun Ajaran</td><td style={{ padding: '2px 5px' }}>: {displayTahun}</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* 3. Table */}
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '9px', tableLayout: 'auto' }}>
+                                <thead style={{ backgroundColor: '#f0f0f0', textAlign: 'center', fontWeight: 'bold' }}>
+                                    <tr>
+                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '25px' }} rowSpan={2}>No</th>
+                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '140px' }} rowSpan={2}>Nama Murid</th>
+                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '35px' }} rowSpan={2}>Nilai</th>
+                                        <th style={{ border: '1px solid #000', padding: '4px 2px' }} colSpan={questionsData.length}>Analisis Butir Soal</th>
+                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '60px' }} rowSpan={2}>Ketuntasan</th>
+                                        <th style={{ border: '1px solid #000', padding: '4px 2px', width: '60px' }} rowSpan={2}>Rekomendasi</th>
+                                    </tr>
+                                    <tr>
+                                        {questionsData.map((q, idx) => (
+                                            <th key={q.id} style={{ border: '1px solid #000', padding: '2px', width: '20px', fontSize: '9px' }} title={q.text_soal}>{idx + 1}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows.map((d, i) => (
+                                        <tr key={i}>
+                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{i + 1}</td>
+                                            <td style={{ border: '1px solid #000', padding: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>{d.nama}</td>
+                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{d.score}</td>
+                                            {questionsData.map(q => {
+                                                const val = d.ansMap[q.id];
+                                                const bg = val === 1 ? '#d1fae5' : val === 0 ? '#fee2e2' : '#ffffff';
+                                                return (<td key={q.id} style={{ border: '1px solid #000', padding: '0', textAlign: 'center', backgroundColor: bg, minWidth: '20px' }}>{val === 1 ? '1' : val === 0 ? '0' : '-'}</td>);
+                                            })}
+                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', fontWeight: 'bold', color: d.isTuntas ? 'green' : 'red' }}>{d.ketuntasan}</td>
+                                            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', color: d.isTuntas ? 'blue' : 'orange' }}>{d.rekomendasi}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot style={{ backgroundColor: '#f9fafb', fontWeight: 'bold' }}>
+                                    <tr>
+                                        <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Jumlah Benar</td>
+                                        {questionsData.map(q => <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center' }}>{questionStats[q.id].correct}</td>)}
+                                        <td colSpan={2} style={{ border: '1px solid #000' }}></td>
+                                    </tr>
+                                    <tr>
+                                        <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Jumlah Salah</td>
+                                        {questionsData.map(q => <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center', color: 'red' }}>{questionStats[q.id].total - questionStats[q.id].correct}</td>)}
+                                        <td colSpan={2} style={{ border: '1px solid #000' }}></td>
+                                    </tr>
+                                    <tr>
+                                        <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Prosentase Benar</td>
+                                        {questionsData.map(q => {
+                                            const percent = questionStats[q.id].total > 0 ? Math.round((questionStats[q.id].correct / questionStats[q.id].total) * 100) : 0;
+                                            return <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center' }}>{percent}%</td>
+                                        })}
+                                        <td colSpan={2} style={{ border: '1px solid #000' }}></td>
+                                    </tr>
+                                    <tr>
+                                        <td colSpan={3} style={{ border: '1px solid #000', padding: '3px', textAlign: 'right', paddingRight: '10px' }}>Tingkat Kesukaran</td>
+                                        {questionsData.map(q => {
+                                            const percent = questionStats[q.id].total > 0 ? Math.round((questionStats[q.id].correct / questionStats[q.id].total) * 100) : 0;
+                                            let label = "Sd", color = "blue";
+                                            if (percent > 70) { label = "M"; color = "green"; }
+                                            else if (percent < 30) { label = "S"; color = "red"; }
+                                            return <td key={q.id} style={{ border: '1px solid #000', textAlign: 'center', color: color }}>{label}</td>
+                                        })}
+                                        <td colSpan={2} style={{ border: '1px solid #000' }}></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        {/* 4. Signature Section */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', fontSize: '8pt', pageBreakInside: 'avoid' }}>
+                            <div style={{ textAlign: 'center', width: '250px', lineHeight: '1.2' }}>
+                                <p style={{ margin: 0 }}>Mengetahui,</p>
+                                <p style={{ margin: 0 }}>Kepala Sekolah</p>
+                                <div style={{ height: '40px' }}></div>
+                                <p style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '8pt' }}>{kepSekName}</p>
+                                <p style={{ fontSize: '8pt', margin: 0 }}>NIP. {kepSekNip}</p>
+                            </div>
+                            <div style={{ textAlign: 'center', width: '250px', lineHeight: '1.2' }}>
+                                <p style={{ margin: 0 }}>Tuban, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                <p style={{ margin: 0 }}>{guruJabatan}</p>
+                                <div style={{ height: '40px' }}></div>
+                                <p style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '8pt' }}>{guruName}</p>
+                                <p style={{ fontSize: '8pt', margin: 0 }}>NIP. {guruNip}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

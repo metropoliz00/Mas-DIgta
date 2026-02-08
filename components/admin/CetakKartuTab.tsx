@@ -7,7 +7,7 @@ import { api } from '../../services/api';
 const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User, students: any[], schedules: any[] }) => {
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKecamatan, setFilterKecamatan] = useState('all');
-    const [filterSession, setFilterSession] = useState('all'); 
+    const [filterExamType, setFilterExamType] = useState('all'); // Changed from filterSession
     const [filterClass, setFilterClass] = useState('all');
     const [showAll, setShowAll] = useState(false);
     
@@ -54,6 +54,12 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
         );
     }, [studentList]);
 
+    // NEW: Unique Exam Types for Filter
+    const uniqueExamTypes = useMemo(() => {
+        const types = new Set(studentList.map(s => s.exam_type).filter(Boolean));
+        return Array.from(types).sort();
+    }, [studentList]);
+
     const filteredStudents = useMemo(() => {
         return studentList.filter(s => {
             if (currentUser.role === 'Guru') {
@@ -62,17 +68,14 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                 if (filterSchool !== 'all' && s.school !== filterSchool) return false;
                 if (filterKecamatan !== 'all' && (s.kecamatan || '').toLowerCase() !== filterKecamatan.toLowerCase()) return false;
             }
-            if (filterSession !== 'all' && s.session !== filterSession) return false;
+            // CHANGED: Filter by Exam Type instead of Session
+            if (filterExamType !== 'all' && s.exam_type !== filterExamType) return false;
+            
             if (filterClass !== 'all' && (s.kelas || '') !== filterClass) return false;
             return true;
         });
-    }, [studentList, currentUser, filterSchool, filterKecamatan, filterSession, filterClass]);
+    }, [studentList, currentUser, filterSchool, filterKecamatan, filterExamType, filterClass]);
 
-    const getGelombang = (schoolName: string) => {
-        const sched = schedules.find((s: any) => s.school === schoolName);
-        return sched ? sched.gelombang : '-';
-    };
-    
     // UPDATED LOGOS from CONFIG (Transparent fallback if empty)
     const transparentPixel = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     const logoLeftUrl = appConfig['LOGO_KABUPATEN'] || transparentPixel;
@@ -92,7 +95,7 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                     <img src="${logoLeftUrl}" class="logo" />
                     <div class="header-text">
                         <h2>KARTU PESERTA</h2>
-                        <p class="title-sub">UJI COBA OSN 2026</p>
+                        <p class="title-sub">ASSESMENT SUMATIF</p>
                         <p class="school-name">${s.school} - Kecamatan ${s.kecamatan || '-'}</p>
                     </div>
                     <img src="${logoRightUrl}" class="logo" />
@@ -102,8 +105,8 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                         <table class="info-table">
                             <tr><td width="65">Nama</td><td>: <b>${s.fullname}</b></td></tr>
                             <tr><td>Kelas</td><td>: ${s.kelas || '-'}</td></tr>
-                            <tr><td>Gelombang</td><td>: ${getGelombang(s.school)}</td></tr>
                             <tr><td>Ujian</td><td>: <b>${s.exam_type || '-'}</b></td></tr>
+                            <tr><td>Sesi</td><td>: ${s.session || '-'}</td></tr>
                             <tr><td>Username</td><td>: <b>${s.username}</b></td></tr>
                             <tr><td>Password</td><td>: <b>${s.password || '-'}</b></td></tr>
                         </table>
@@ -177,8 +180,8 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                         padding-top: 2px;
                     }
                     .info-col { flex: 1; }
-                    .info-table { width: 100%; font-size: 8pt; border-collapse: collapse; }
-                    .info-table td { padding: 2px 1px; vertical-align: top; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55mm; }
+                    .info-table { width: 100%; font-size: 8pt; border-collapse: collapse; line-height: 1.25; }
+                    .info-table td { padding: 1px 1px; vertical-align: top; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55mm; }
                     
                     .photo-col { width: 22mm; display: flex; justify-content: center; align-items: flex-start; padding-top: 0; }
                     .photo-box {
@@ -236,14 +239,12 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
              
              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* CHANGED: Filter Jenis Ujian instead of Session */}
                     <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Filter Sesi</label>
-                        <select className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100" value={filterSession} onChange={e => setFilterSession(e.target.value)}>
-                            <option value="all">Semua Sesi</option>
-                            <option value="Sesi 1">Sesi 1</option>
-                            <option value="Sesi 2">Sesi 2</option>
-                            <option value="Sesi 3">Sesi 3</option>
-                            <option value="Sesi 4">Sesi 4</option>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Filter Jenis Ujian</label>
+                        <select className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100" value={filterExamType} onChange={e => setFilterExamType(e.target.value)}>
+                            <option value="all">Semua Jenis Ujian</option>
+                            {uniqueExamTypes.map((t:any) => <option key={t} value={t}>{t}</option>)}
                         </select>
                     </div>
 
@@ -294,7 +295,7 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                                 <img src={logoLeftUrl} className="h-[46px] w-auto object-contain pl-1" alt="Logo"/>
                                 <div className="text-center flex-1 leading-tight px-1">
                                     <h4 className="font-bold text-[13px]">KARTU PESERTA</h4>
-                                    <p className="font-bold text-[11px]">UJI COBA OSN 2026</p>
+                                    <p className="font-bold text-[11px]">ASSESMENT SUMATIF</p>
                                     <p className="text-[10px] italic mt-0.5 truncate max-w-[200px] mx-auto">{s.school} - {s.kecamatan || '-'}</p>
                                 </div>
                                 <img src={logoRightUrl} className="h-[46px] w-auto object-contain pr-1" alt="Logo"/>
@@ -302,13 +303,13 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                             
                             <div className="flex gap-2 flex-1 pt-1 px-1">
                                 <div className="flex-1">
-                                    <table className="w-full text-[11px] leading-loose">
+                                    <table className="w-full text-[11px] leading-[1.25]">
                                         <tbody>
                                             <tr><td className="w-16">Nama</td><td>: <b>{s.fullname}</b></td></tr>
                                             <tr><td>Kelas</td><td>: {s.kelas || '-'}</td></tr>
                                             <tr><td>Sekolah</td><td>: {s.school}</td></tr>
-                                            <tr><td>Gelombang</td><td>: {getGelombang(s.school)}</td></tr>
                                             <tr><td>Ujian</td><td>: <b>{s.exam_type || '-'}</b></td></tr>
+                                            <tr><td>Sesi</td><td>: {s.session || '-'}</td></tr>
                                             <tr><td>Username</td><td>: <b>{s.username}</b></td></tr>
                                             <tr><td>Password</td><td>: <b>{s.password || '-'}</b></td></tr>
                                         </tbody>

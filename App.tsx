@@ -517,6 +517,12 @@ function App() {
                                         )}
                                     </div>
 
+                                    {/* Added: Jenis Ujian Display */}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Jenis Ujian</label>
+                                        <p className="text-lg font-bold text-indigo-600 mt-1">{currentUser?.exam_type || '-'}</p>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Sesi</label>
