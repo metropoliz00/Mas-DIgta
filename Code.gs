@@ -107,8 +107,8 @@ function getSheet(name) {
     } else if (name === SHEET_USER_CONFIGS) {
       sheet.appendRow(["Username", "ConfigJSON", "LastUpdated"]);
     } else if (name === SHEET_RESULTS) {
-      // UPDATED: Added JenisUjian at Col 9
-      sheet.appendRow(["Timestamp", "Username", "Nama", "Sekolah", "Mapel", "Nilai", "AnalisisJSON", "Durasi", "JenisUjian"]);
+      // UPDATED: Added Kelas at Col 10 and TP at Col 11
+      sheet.appendRow(["Timestamp", "Username", "Nama", "Sekolah", "Mapel", "Nilai", "AnalisisJSON", "Durasi", "JenisUjian", "Kelas", "TP"]);
     } else if (name === SHEET_EXTERNAL_GRADES) {
       // NEW: Sheet for Manual/Imported Grades
       sheet.appendRow(["ID", "Username", "Mapel", "ExamType", "Nilai", "Timestamp"]);
@@ -629,7 +629,7 @@ function startExam(username, fullname, subject) {
   return { success: true, startTime: new Date().getTime() };
 }
 
-// UPDATED: Added examType as Col 9
+// UPDATED: Added examType, kelas, tp as columns
 function submitAnswers(username, fullname, school, subject, answers, scoreInfo, startTime, qCount, qIds) {
   const rawQ = getRawQuestions(subject);
   let totalScore = 0;
@@ -669,13 +669,18 @@ function submitAnswers(username, fullname, school, subject, answers, scoreInfo, 
   const s = (durationSec % 60).toString().padStart(2,'0');
   const durationStr = `${h}:${m}:${s}`;
   
-  // Get Exam Type from User Data to save in Result
+  // Get Exam Type, Kelas, TP from User Data to save in Result
   const userSheet = getSheet(SHEET_USERS);
   const userData = userSheet.getDataRange().getValues();
   let examType = '';
+  let kelas = '';
+  let tp = '';
+
   for(let i=1; i<userData.length; i++) {
     if(userData[i][1] === username) {
       userSheet.getRange(i+1, 13).setValue('FINISHED'); 
+      kelas = userData[i][5] || ''; // Col 6 = Kelas
+      tp = userData[i][14] || '';   // Col 15 = ActiveTP
       examType = userData[i][15] || ''; // Col 16 = ExamType
       break;
     }
@@ -683,7 +688,7 @@ function submitAnswers(username, fullname, school, subject, answers, scoreInfo, 
 
   sheet.appendRow([
     new Date().toISOString(), username, fullname, school, subject,
-    roundedGrade, JSON.stringify(analysisObj), durationStr, examType
+    roundedGrade, JSON.stringify(analysisObj), durationStr, examType, kelas, tp
   ]);
   
   logActivity(username, 'FINISH', { subject: subject, score: roundedGrade });
@@ -737,7 +742,9 @@ function getRecapData() {
     nilai: r.Nilai,
     analisis: r.AnalisisJSON, 
     durasi: r.Durasi,
-    exam_type: r.JenisUjian || '' // Added
+    exam_type: r.JenisUjian || '', 
+    kelas: r.Kelas || '', // Added
+    tp: r.TP || ''        // Added
   }));
 
   const manualMapped = manualData.map(r => ({
@@ -748,7 +755,9 @@ function getRecapData() {
     exam_type: r.ExamType,
     nilai: r.Nilai,
     sekolah: '', // Will be filled by frontend lookup
-    nama: '' // Will be filled by frontend lookup
+    nama: '', // Will be filled by frontend lookup
+    kelas: '', // Manual might not have class unless looked up, let frontend handle or add lookup here
+    tp: ''
   }));
 
   return [...autoMapped, ...manualMapped];
