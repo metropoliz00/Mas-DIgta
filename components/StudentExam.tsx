@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, Check, ChevronLeft, ChevronRight, LayoutGrid, Flag, Monitor, LogOut, Loader2, AlertTriangle, X, ShieldAlert, RotateCcw, ZoomIn, ZoomOut, Maximize, Move, HelpCircle } from 'lucide-react';
 import { QuestionWithOptions, UserAnswerValue, Exam } from '../types';
@@ -25,7 +26,6 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 const ImageViewer = ({ src, onClose }: { src: string; onClose: () => void }) => {
-    // ... (Keep existing logic, just refresh styling) ...
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -91,11 +91,14 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(true);
   const [violationCount, setViolationCount] = useState(0);
+  const [appConfig, setAppConfig] = useState<Record<string, string>>({});
 
   const storageKey = `cbt_answers_${username}_${exam.id}`;
 
-  // Initialize Questions
+  // Initialize Config & Questions
   useEffect(() => {
+    api.getAppConfig().then(setAppConfig).catch(console.error);
+
     if (questions.length > 0) {
         const questionsWithShuffledOptions = questions.map(q => ({ ...q, options: shuffleArray(q.options) }));
         let fullyShuffled = shuffleArray(questionsWithShuffledOptions);
@@ -123,24 +126,31 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
       }
   }, [answers, doubtful, storageKey]);
 
-  // Timer
+  // Timer & Auto Submit Logic
   useEffect(() => {
     const updateTimer = () => {
       const now = Date.now();
+      // Calculate absolute time elapsed based on server-synced start time
       const elapsedSeconds = Math.floor((now - startTime) / 1000);
       const totalSeconds = exam.durasi * 60;
       const remaining = Math.max(0, totalSeconds - elapsedSeconds);
+      
       setTimeLeft(remaining);
+      
       if (remaining <= 0) {
           executeFinish(true);
       }
     };
+
+    // Immediate check on mount
     updateTimer();
+
     const intervalId = setInterval(updateTimer, 1000);
     return () => clearInterval(intervalId);
   }, [startTime, exam.durasi]);
 
   const executeFinish = async (isTimeout = false) => {
+    if (isSubmitting) return; // Prevent double submission
     setShowConfirmFinish(false);
     setIsSubmitting(true);
     try {
@@ -203,10 +213,19 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
   const currentQ = examQuestions[currentIdx];
   const isLast = currentIdx === examQuestions.length - 1;
   const progress = Math.round((Object.keys(answers).length / examQuestions.length) * 100);
+  const schoolLogo = appConfig['LOGO_SEKOLAH'];
 
   return (
     <div className={`flex flex-col h-screen bg-slate-100 font-sans overflow-hidden select-none ${!isLocked ? 'blur-sm pointer-events-none' : ''}`}>
       {zoomedImage && <ImageViewer src={zoomedImage} onClose={() => setZoomedImage(null)} />}
+      {isSubmitting && (
+          <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur flex items-center justify-center">
+              <div className="text-center">
+                  <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-2"/>
+                  <p className="font-bold text-slate-700">Menyimpan Jawaban...</p>
+              </div>
+          </div>
+      )}
       
       {/* VIOLATION OVERLAY */}
       {!isLocked && (
@@ -220,23 +239,40 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
           </div>
       )}
 
-      {/* HEADER */}
-      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0 z-20 shadow-sm relative">
-          <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-indigo-200 shadow-md">
-                  <Monitor size={20}/>
+      {/* HEADER - UPDATED BRANDING */}
+      <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm relative h-auto">
+          {/* LEFT: BRANDING */}
+          <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md shadow-slate-200 border border-slate-100 overflow-hidden relative shrink-0">
+                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-white"></div>
+                   {schoolLogo ? (
+                       <img src={schoolLogo} className="w-full h-full object-contain p-1 relative z-10" alt="Logo" />
+                   ) : (
+                       <div className="font-black text-indigo-600 text-xl relative z-10">M</div>
+                   )}
               </div>
-              <div className="hidden md:block">
-                  <h1 className="font-bold text-slate-800 text-sm">{exam.nama_ujian}</h1>
-                  <div className="h-1.5 w-32 bg-slate-100 rounded-full mt-1 overflow-hidden">
-                      <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                  </div>
+              <div className="leading-tight">
+                  <h1 className="font-black text-lg md:text-xl text-slate-800 tracking-tighter">
+                      MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">DIGTA</span>
+                  </h1>
+                  <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                      Management Assessment Sumatif Digital
+                  </p>
               </div>
           </div>
 
+          {/* CENTER: EXAM NAME & PROGRESS (Hidden on Mobile) */}
+          <div className="hidden lg:flex flex-col items-center absolute left-1/2 -translate-x-1/2">
+               <h2 className="font-bold text-slate-700 text-sm mb-1 px-3 py-0.5 bg-slate-50 rounded-md border border-slate-100 shadow-sm">{exam.nama_ujian}</h2>
+               <div className="h-1.5 w-48 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+               </div>
+          </div>
+
+          {/* RIGHT: TIMER & TOGGLE */}
           <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold text-lg border ${timeLeft < 300 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
-                  <Clock size={18}/> {formatTime(timeLeft)}
+              <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-mono font-bold text-sm md:text-lg border ${timeLeft < 300 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                  <Clock size={18} className="shrink-0"/> {formatTime(timeLeft)}
               </div>
               <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg border border-slate-200 transition">
                   <LayoutGrid size={20}/>
@@ -246,12 +282,12 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
 
       {/* MAIN CONTENT - SPLIT LAYOUT */}
       <div className="flex-1 flex overflow-hidden relative">
-          <main className="flex-1 overflow-y-auto bg-slate-100 p-4 md:p-6 pb-24">
-              <div className="max-w-4xl mx-auto w-full">
-                  {/* Question Card */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden min-h-[60vh] flex flex-col">
+          <main className="flex-1 overflow-y-auto bg-slate-100 p-2 md:p-3 pb-24">
+              <div className="w-full h-full flex flex-col">
+                  {/* Question Card - UPDATED: Constrained Max Width */}
+                  <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex-1 flex flex-col w-full max-w-5xl mx-auto">
                       {/* Question Toolbar */}
-                      <div className="h-14 border-b border-slate-100 flex items-center justify-between px-4 bg-slate-50/50">
+                      <div className="h-14 border-b border-slate-100 flex items-center justify-between px-4 bg-slate-50/50 shrink-0">
                           <div className="flex items-center gap-2">
                               <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-md shadow-sm">No. {currentIdx + 1}</span>
                               <span className="text-xs font-bold text-slate-400">/ {examQuestions.length}</span>
@@ -263,12 +299,12 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                           </div>
                       </div>
 
-                      <div className="p-6 md:p-8 flex-1">
-                           <div className={`prose max-w-none text-slate-800 leading-relaxed ${fontSize==='lg'?'text-xl':fontSize==='sm'?'text-sm':'text-base'}`}>
+                      <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
+                           <div className={`prose max-w-none text-slate-800 leading-relaxed ${fontSize==='lg'?'text-3xl':fontSize==='sm'?'text-lg':'text-xl'}`}>
                                 {/* Image Display */}
                                 {currentQ.gambar && (
                                     <div className="mb-6 rounded-xl border-2 border-slate-100 p-2 bg-slate-50 w-fit max-w-full mx-auto relative group">
-                                        <img src={currentQ.gambar} className="max-h-[350px] object-contain rounded-lg cursor-zoom-in" onClick={() => setZoomedImage(currentQ.gambar!)} />
+                                        <img src={currentQ.gambar} className="max-h-[400px] object-contain rounded-lg cursor-zoom-in" onClick={() => setZoomedImage(currentQ.gambar!)} />
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none">
                                             <span className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1"><Maximize size={12}/> Perbesar</span>
                                         </div>
@@ -277,32 +313,36 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                                 {/* Question Text */}
                                 <div className="mb-8 whitespace-pre-wrap font-medium">{currentQ.text_soal}</div>
                                 
-                                {/* Options */}
-                                <div className="space-y-3">
-                                    {currentQ.tipe_soal === 'PG' && currentQ.options.map((opt, i) => {
-                                        const isSel = answers[currentQ.id] === opt.id;
-                                        return (
-                                            <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PG')} 
-                                                 className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm ring-1 ring-indigo-200' : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'}`}>
-                                                <div className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm transition-colors ${isSel ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600'}`}>
-                                                    {String.fromCharCode(65 + i)}
-                                                </div>
-                                                <div className="pt-1 flex-1 font-medium text-slate-700">
-                                                    {opt.text_jawaban.startsWith('http') ? <img src={opt.text_jawaban} className="h-24 rounded border border-slate-200" /> : opt.text_jawaban}
-                                                </div>
-                                                {isSel && <Check className="text-indigo-600 mt-1" size={20} />}
-                                            </div>
-                                        )
-                                    })}
+                                {/* Options - Grid layout for better use of width */}
+                                <div className="space-y-4">
+                                    {currentQ.tipe_soal === 'PG' && (
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {currentQ.options.map((opt, i) => {
+                                                const isSel = answers[currentQ.id] === opt.id;
+                                                return (
+                                                    <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PG')} 
+                                                         className={`flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm ring-1 ring-indigo-200' : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'}`}>
+                                                        <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${isSel ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600'}`}>
+                                                            {String.fromCharCode(65 + i)}
+                                                        </div>
+                                                        <div className="pt-1.5 flex-1 font-medium text-slate-700">
+                                                            {opt.text_jawaban.startsWith('http') ? <img src={opt.text_jawaban} className="h-24 rounded border border-slate-200" /> : opt.text_jawaban}
+                                                        </div>
+                                                        {isSel && <Check className="text-indigo-600 mt-1" size={24} />}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
                                     
                                     {currentQ.tipe_soal === 'PGK' && currentQ.options.map((opt) => {
                                         const curr = (answers[currentQ.id] as string[]) || [];
                                         const isSel = curr.includes(opt.id);
                                         return (
                                             <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PGK')} 
-                                                 className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-slate-200 hover:border-indigo-200'}`}>
-                                                <div className={`w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center mt-1 transition-colors ${isSel ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
-                                                    {isSel && <Check size={14} strokeWidth={3} />}
+                                                 className={`flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-slate-200 hover:border-indigo-200'}`}>
+                                                <div className={`w-8 h-8 shrink-0 rounded border-2 flex items-center justify-center mt-1 transition-colors ${isSel ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
+                                                    {isSel && <Check size={18} strokeWidth={3} />}
                                                 </div>
                                                 <div className="flex-1 font-medium text-slate-700">{opt.text_jawaban}</div>
                                             </div>
@@ -314,11 +354,11 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                                             {currentQ.options.map((opt, i) => {
                                                 const val = (answers[currentQ.id] as Record<string, boolean>)?.[opt.id];
                                                 return (
-                                                    <div key={opt.id} className={`p-4 flex flex-col sm:flex-row items-center gap-4 ${i % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
-                                                        <div className="flex-1 font-medium text-sm text-slate-800 text-center sm:text-left">{opt.text_jawaban}</div>
-                                                        <div className="flex gap-2 shrink-0">
-                                                            <button onClick={() => handleAnswer(true, 'BS', opt.id)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition ${val === true ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>BENAR</button>
-                                                            <button onClick={() => handleAnswer(false, 'BS', opt.id)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition ${val === false ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-rose-600 border-rose-200 hover:bg-rose-50'}`}>SALAH</button>
+                                                    <div key={opt.id} className={`p-5 flex flex-col sm:flex-row items-center gap-6 ${i % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
+                                                        <div className="flex-1 font-medium text-slate-800 text-center sm:text-left">{opt.text_jawaban}</div>
+                                                        <div className="flex gap-3 shrink-0">
+                                                            <button onClick={() => handleAnswer(true, 'BS', opt.id)} className={`px-6 py-3 rounded-xl font-bold border transition ${val === true ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>BENAR</button>
+                                                            <button onClick={() => handleAnswer(false, 'BS', opt.id)} className={`px-6 py-3 rounded-xl font-bold border transition ${val === false ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-rose-600 border-rose-200 hover:bg-rose-50'}`}>SALAH</button>
                                                         </div>
                                                     </div>
                                                 )

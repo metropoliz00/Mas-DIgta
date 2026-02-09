@@ -197,6 +197,16 @@ function App() {
   const handleVerifyToken = async () => {
       enterFullscreen();
       if (!inputToken) { setErrorMsg('Masukkan token ujian.'); return; }
+      
+      // Check if there's an existing session first
+      const storageKeyTime = `cbt_start_${currentUser?.username}_${selectedExamId}`;
+      const savedTime = localStorage.getItem(storageKeyTime);
+      if (savedTime) {
+          // Skip token check if resuming
+          setShowConfirmModal(true);
+          return;
+      }
+
       setLoading(true);
       setLoadingMessage('Verifikasi Token...');
       setErrorMsg('');
@@ -212,14 +222,29 @@ function App() {
     setLoading(true);
     setLoadingMessage('Mengunduh Soal...');
     try {
-        const serverToken = await api.getServerToken();
-        if (inputToken.toUpperCase() !== serverToken.toUpperCase()) { setErrorMsg('Token Invalid!'); setShowConfirmModal(false); setLoading(false); return; }
+        const storageKeyTime = `cbt_start_${currentUser.username}_${selectedExamId}`;
+        const savedTime = localStorage.getItem(storageKeyTime);
+        let activeStartTime = 0;
+
+        if (savedTime) {
+            // RESUME SESSION
+            activeStartTime = parseInt(savedTime);
+            console.log("Resuming exam from:", new Date(activeStartTime).toLocaleTimeString());
+        } else {
+            // NEW SESSION
+            const serverToken = await api.getServerToken();
+            if (inputToken.toUpperCase() !== serverToken.toUpperCase()) { 
+                setErrorMsg('Token Invalid!'); setShowConfirmModal(false); setLoading(false); return; 
+            }
+            const res = await api.startExam(currentUser.username, currentUser.nama_lengkap, selectedExamId);
+            activeStartTime = res.startTime || Date.now();
+            localStorage.setItem(storageKeyTime, activeStartTime.toString());
+        }
         
         let qData = await api.getQuestions(selectedExamId);
         
         // --- NEW: FILTER BY TP IF ASSIGNED ---
         if (currentUser.active_tp && currentUser.active_tp !== '-' && currentUser.active_tp !== '') {
-            // Only keep questions matching the user's active TP ID
             const originalCount = qData.length;
             qData = qData.filter(q => q.tp_id === currentUser.active_tp);
             console.log(`Filtered questions by TP [${currentUser.active_tp}]: ${originalCount} -> ${qData.length}`);
@@ -227,8 +252,7 @@ function App() {
         // -------------------------------------
 
         if (qData.length === 0) { setErrorMsg('Soal belum tersedia untuk ujian/TP ini.'); setShowConfirmModal(false); setLoading(false); return; }
-        const res = await api.startExam(currentUser.username, currentUser.nama_lengkap, selectedExamId);
-        const activeStartTime = res.startTime || Date.now();
+        
         enterFullscreen();
         setQuestions(qData);
         setStartTime(activeStartTime);
@@ -257,8 +281,13 @@ function App() {
     setLoadingMessage(isTimeout ? 'Waktu Habis. Menyimpan...' : 'Mengunggah Jawaban...');
     try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
     try {
-        const lsKey = `cbt_answers_${currentUser.username}_${selectedExamId}`;
-        localStorage.removeItem(lsKey);
+        const lsKeyAnswers = `cbt_answers_${currentUser.username}_${selectedExamId}`;
+        const lsKeyTime = `cbt_start_${currentUser.username}_${selectedExamId}`;
+        
+        // Clear local storage on finish
+        localStorage.removeItem(lsKeyAnswers);
+        localStorage.removeItem(lsKeyTime);
+
         await api.submitExam({
             user: currentUser,
             subject: selectedExamId,
@@ -567,7 +596,7 @@ function App() {
                                             disabled={loading || examList.length === 0}
                                             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                         >
-                                            <PlayCircle size={20} /> Mulai Ujian
+                                            <PlayCircle size={20} /> {localStorage.getItem(`cbt_start_${currentUser?.username}_${selectedExamId}`) ? "Lanjutkan" : "Mulai Ujian"}
                                         </button>
                                     </div>
                                 ) : (

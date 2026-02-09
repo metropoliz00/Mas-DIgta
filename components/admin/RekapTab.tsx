@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
@@ -174,35 +173,40 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
             if (row) {
                 const score = parseFloat(d.nilai) || 0;
                 
-                // PRIORITAS: Cek kolom 'ExamType' dari database (baru ditambahkan)
-                // Jika kosong, fallback ke logika nama Mapel
+                // PRIORITAS UTAMA: Gunakan Jenis Ujian (Exam Type) jika ada
                 let colKey = '';
-                const eType = (d.exam_type || '').toLowerCase();
-                const mapelLower = (d.mapel || '').toLowerCase();
-
-                if (eType.includes('sumatif 1') || mapelLower.includes('sumatif 1')) colKey = 'sumatif1';
-                else if (eType.includes('sumatif 2') || mapelLower.includes('sumatif 2')) colKey = 'sumatif2';
-                else if (eType.includes('sumatif 3') || mapelLower.includes('sumatif 3')) colKey = 'sumatif3';
-                else if (eType.includes('sumatif 4') || mapelLower.includes('sumatif 4')) colKey = 'sumatif4';
-                else if (eType.includes('akhir') || mapelLower.includes('akhir')) colKey = 'sas';
+                const eType = (d.exam_type || '').toLowerCase().trim();
                 
-                // Override score if manual import is newer or explicitly overrides? 
-                // Currently simply overrides based on sort order (latest first from API)
-                // We trust the latest entry.
+                if (eType) {
+                    if (eType.includes('sumatif 1')) colKey = 'sumatif1';
+                    else if (eType.includes('sumatif 2')) colKey = 'sumatif2';
+                    else if (eType.includes('sumatif 3')) colKey = 'sumatif3';
+                    else if (eType.includes('sumatif 4')) colKey = 'sumatif4';
+                    else if (eType.includes('akhir') || eType.includes('sas')) colKey = 'sas';
+                }
+                
+                // Fallback: Jika Exam Type kosong, gunakan Nama Mapel (Legacy)
+                if (!colKey && !eType) {
+                    const mapelLower = (d.mapel || '').toLowerCase();
+                    if (mapelLower.includes('sumatif 1')) colKey = 'sumatif1';
+                    else if (mapelLower.includes('sumatif 2')) colKey = 'sumatif2';
+                    else if (mapelLower.includes('sumatif 3')) colKey = 'sumatif3';
+                    else if (mapelLower.includes('sumatif 4')) colKey = 'sumatif4';
+                    else if (mapelLower.includes('akhir') || mapelLower.includes('sas')) colKey = 'sas';
+                }
+                
+                // Override score if colKey determined
                 if (colKey) {
                     // Check if there is an edit in progress
                     const editKey = `${d.username}_${colKey}`;
                     if (editedCells[editKey]) {
                         row[colKey] = editedCells[editKey].val;
                     } else {
-                        // Only overwrite if currently '-' or update logic needed
-                        // Since filteredData is sorted new->old, first encounter is latest
+                        // Priority to latest data (first in array). 
+                        // Only set if not already set (meaning newer data takes precedence if we iterate new->old)
                         if (row[colKey] === '-') row[colKey] = score;
                     }
                 }
-
-                // Recalc logic for average is tricky with mixed states, 
-                // for display purpose, we do a simple calc at the end based on current row values
             }
         });
 
