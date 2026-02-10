@@ -11,16 +11,6 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
     const [filterClass, setFilterClass] = useState('all');
     const [resetting, setResetting] = useState<string | null>(null);
 
-    // Extract Class logic
-    const getClass = (schoolName: string) => {
-        if (!schoolName) return '-';
-        const match = schoolName.match(/\d+/);
-        if ((schoolName.toLowerCase().includes('kelas') || schoolName.toLowerCase().includes('kls')) && match) {
-            return match[0];
-        }
-        return '-';
-    };
-
     // Filter students ONLY (Exclude admin/guru from live monitor)
     const onlyStudents = useMemo(() => students.filter(s => s.role === 'siswa'), [students]);
 
@@ -34,14 +24,19 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
         return Array.from(kecs).sort(); 
     }, [onlyStudents]);
 
+    // UPDATED: Use s.kelas directly from database
     const uniqueClasses = useMemo(() => {
-        const classes = new Set(onlyStudents.map(s => getClass(s.school)).filter(c => c !== '-'));
-        return Array.from(classes).sort();
+        const classes = new Set(onlyStudents.map(s => s.kelas).filter(Boolean));
+        return Array.from(classes).sort((a: any, b: any) => 
+            String(a).localeCompare(String(b), undefined, { numeric: true })
+        );
     }, [onlyStudents]);
 
     const filtered = useMemo(() => { 
         return onlyStudents.filter(s => { 
-            const sClass = getClass(s.school);
+            // UPDATED: Use direct class property
+            const sClass = s.kelas || '-';
+            
             const matchName = (s.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                               (s.username || '').toLowerCase().includes(searchTerm.toLowerCase()); 
             
@@ -156,7 +151,10 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                                 <tr key={i} className="hover:bg-slate-50/80 transition-colors group">
                                     <td className="p-3 md:p-5 font-mono text-slate-500 font-bold">{s.username}</td>
                                     <td className="p-3 md:p-5 font-bold text-slate-800">{s.fullname}</td>
-                                    <td className="p-3 md:p-5 text-center font-bold text-indigo-600 bg-indigo-50/30">{getClass(s.school)}</td>
+                                    <td className="p-3 md:p-5 text-center font-bold text-indigo-600 bg-indigo-50/30">
+                                        {/* UPDATED: Display Class direct from DB */}
+                                        {s.kelas || '-'}
+                                    </td>
                                     <td className="p-3 md:p-5 text-slate-600">
                                         <div className="font-bold">{s.school}</div>
                                         <div className="text-[10px] text-slate-500 uppercase tracking-wide">{s.kecamatan || '-'}</div>
