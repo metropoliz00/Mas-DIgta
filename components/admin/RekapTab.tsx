@@ -177,7 +177,11 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                 
                 // LOGIC: Map Exam Type to Column Key using Regex for robustness
                 let colKey = '';
-                const eType = (d.exam_type || '').toLowerCase().trim();
+                
+                // Fallback to user profile exam type if missing in result (Legacy Support)
+                const userProfile = userMap[String(d.username).toLowerCase().trim()];
+                const rawExamType = d.exam_type || userProfile?.exam_type || '';
+                const eType = rawExamType.toLowerCase().trim();
                 
                 if (eType) {
                     // Sumatif 1 / PH 1 / LM 1
@@ -239,7 +243,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
 
         return Object.values(studentRows).sort((a: any, b: any) => a.nama.localeCompare(b.nama));
 
-    }, [filteredData, students, viewMode, filterSubject, filterClass, filterSchool, filterKecamatan, currentUser, editedCells]);
+    }, [filteredData, students, viewMode, filterSubject, filterClass, filterSchool, filterKecamatan, currentUser, editedCells, userMap]);
 
     // Handle Manual Input Change
     const handleCellChange = (username: string, field: string, value: string) => {
@@ -371,7 +375,8 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                     "Sekolah": d.sekolah,
                     "Kecamatan": userProfile?.kecamatan || '-',
                     "Mata Pelajaran": d.mapel,
-                    "Jenis Ujian": d.exam_type || '-',
+                    // Export uses Fallback logic
+                    "Jenis Ujian": d.exam_type || userProfile?.exam_type || '-',
                     "Nilai Akhir": parseFloat(d.nilai) || 0,
                     "Durasi": formatDurationToText(d.durasi)
                 };
@@ -650,6 +655,9 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                                     const userKec = userProfile?.kecamatan || '-';
                                     const userKelas = userProfile?.kelas || '-';
                                     
+                                    // Use User Profile's Exam Type as fallback if Result's exam type is missing (legacy data)
+                                    const displayExamType = d.exam_type || userProfile?.exam_type || '-';
+
                                     return (
                                     <tr key={i} className="hover:bg-slate-50 transition group">
                                         <td className="p-4 text-center text-slate-500">{i + 1}</td>
@@ -666,7 +674,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                                             {d.mapel}
                                         </td>
                                         <td className="p-4 text-center border-l border-slate-100 bg-blue-50/10 text-xs text-slate-600 font-medium">
-                                            {d.exam_type || '-'}
+                                            {displayExamType}
                                         </td>
                                         <td className="p-4 text-center border-l border-slate-100 bg-emerald-50/10">
                                             <span className="text-lg font-black text-emerald-600">{d.nilai}</span>
