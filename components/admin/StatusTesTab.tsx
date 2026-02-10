@@ -105,7 +105,21 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                         </div>
                         <div className="relative group">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16}/>
-                            <select className="pl-10 pr-4 py-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 focus:bg-white bg-slate-50 transition-all cursor-pointer w-full md:w-40 appearance-none" value={filterSchool} onChange={e => setFilterSchool(e.target.value)}><option value="all">Semua Sekolah</option>{uniqueSchools.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                            <select 
+                                className="pl-10 pr-4 py-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 focus:bg-white bg-slate-50 transition-all cursor-pointer w-full md:w-40 appearance-none" 
+                                value={filterSchool} 
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setFilterSchool(val);
+                                    if (val !== 'all') {
+                                        const found = onlyStudents.find(s => s.school === val);
+                                        if (found && found.kecamatan) setFilterKecamatan(found.kecamatan);
+                                    }
+                                }}
+                            >
+                                <option value="all">Semua Sekolah</option>
+                                {uniqueSchools.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                         </div>
                         <div className="relative group">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16}/>

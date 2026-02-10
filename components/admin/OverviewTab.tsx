@@ -481,7 +481,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                             <select 
                                 className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 font-bold text-slate-700 transition-all bg-slate-50 focus:bg-white cursor-pointer appearance-none"
                                 value={schoolFilter}
-                                onChange={e => setSchoolFilter(e.target.value)}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setSchoolFilter(val);
+                                    if (val !== 'all') {
+                                        const found = studentUsers.find((s:any) => s.school === val);
+                                        if (found && found.kecamatan) setKecamatanFilter(found.kecamatan);
+                                    }
+                                }}
                             >
                                 <option value="all">Semua Sekolah</option>
                                 {uniqueSchoolList.map((s:any) => <option key={s} value={s}>{s}</option>)}

@@ -202,7 +202,18 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Filter Sekolah</label>
-                            <select className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100" value={filterSchool} onChange={e => setFilterSchool(e.target.value)}>
+                            <select 
+                                className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100" 
+                                value={filterSchool} 
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setFilterSchool(val);
+                                    if (val !== 'all') {
+                                        const found = studentList.find(s => s.school === val);
+                                        if (found && found.kecamatan) setFilterKecamatan(found.kecamatan);
+                                    }
+                                }}
+                            >
                                 <option value="all">Semua Sekolah</option>
                                 {uniqueSchools.map((s:any) => <option key={s} value={s}>{s}</option>)}
                             </select>
