@@ -42,7 +42,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
         setLoading(true);
         try {
             const res = await api.getRecap();
-            // Sort by timestamp descending (newest first)
+            // Sort by timestamp descending (newest first) to prioritize latest scores in Matrix view
             const sorted = res.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setData(sorted);
             const config = await api.getAppConfig();
@@ -169,6 +169,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
         });
 
         // 3. Map Scores (Pivoting Logic)
+        // This takes data from the 'rekap' (filteredData) and maps it to columns based on 'exam_type'
         filteredData.forEach(d => {
             const row = studentRows[d.username];
             if (row) {
@@ -179,20 +180,23 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                 const eType = (d.exam_type || '').toLowerCase().trim();
                 
                 if (eType) {
-                    // Cek pola: "Sumatif 1", "PH 1", "Lingkup Materi 1", atau diakhiri " 1"
-                    if (/sumatif\s*1$|ph\s*1$|lingkup materi\s*1$/.test(eType) || eType === 'sumatif 1') colKey = 'sumatif1';
-                    else if (/sumatif\s*2$|ph\s*2$|lingkup materi\s*2$/.test(eType) || eType === 'sumatif 2') colKey = 'sumatif2';
+                    // Sumatif 1 / PH 1 / LM 1
+                    if (/sumatif\s*1|ph\s*1|lingkup materi\s*1|lm\s*1/.test(eType)) colKey = 'sumatif1';
                     
-                    // Sumatif 3 / Tengah Semester (STS)
-                    else if (/sumatif\s*3$|ph\s*3$|lingkup materi\s*3$|tengah semester|sts/.test(eType) || eType === 'sumatif 3') colKey = 'sumatif3';
+                    // Sumatif 2 / PH 2 / LM 2
+                    else if (/sumatif\s*2|ph\s*2|lingkup materi\s*2|lm\s*2/.test(eType)) colKey = 'sumatif2';
                     
-                    else if (/sumatif\s*4$|ph\s*4$|lingkup materi\s*4$/.test(eType) || eType === 'sumatif 4') colKey = 'sumatif4';
+                    // Sumatif 3 / PH 3 / STS / PTS / Tengah Semester
+                    else if (/sumatif\s*3|ph\s*3|lingkup materi\s*3|lm\s*3|sts|pts|tengah semester/.test(eType)) colKey = 'sumatif3';
+                    
+                    // Sumatif 4 / PH 4 / LM 4
+                    else if (/sumatif\s*4|ph\s*4|lingkup materi\s*4|lm\s*4/.test(eType)) colKey = 'sumatif4';
                     
                     // Akhir Semester (SAS/PAS/UAS)
-                    else if (eType.includes('akhir') || eType.includes('sas') || eType.includes('pas') || eType.includes('uas')) colKey = 'sas';
+                    else if (/sas|pas|uas|akhir semester|sumatif akhir/.test(eType)) colKey = 'sas';
                 }
                 
-                // Fallback: Jika Exam Type kosong, gunakan Nama Mapel (Legacy)
+                // Fallback: Jika Exam Type kosong, coba gunakan Nama Mapel (Legacy support)
                 if (!colKey && !eType) {
                     const mapelLower = (d.mapel || '').toLowerCase();
                     if (mapelLower.includes('sumatif 1')) colKey = 'sumatif1';
