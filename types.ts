@@ -39,6 +39,7 @@ export interface Question {
   exam_id: string;
   text_soal: string;
   gambar?: string;
+  caption?: string; // NEW: Keterangan Gambar
   tipe_soal: QuestionType;
   bobot_nilai: number;
   kelas?: string; 
@@ -51,6 +52,7 @@ export interface QuestionRow {
   text_soal: string;
   tipe_soal: QuestionType;
   gambar: string;
+  caption?: string; // NEW
   opsi_a: string;
   opsi_b: string;
   opsi_c: string;

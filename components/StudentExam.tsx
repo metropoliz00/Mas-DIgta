@@ -10,7 +10,8 @@ interface StudentExamProps {
   userFullName: string;
   username: string; 
   userPhoto?: string;
-  startTime: number; 
+  startTime: number;
+  examType?: string; 
   onFinish: (answers: Record<string, UserAnswerValue>, questionCount: number, questionIds: string[], isTimeout?: boolean) => Promise<void> | void;
   onExit: () => void;
 }
@@ -77,7 +78,7 @@ const ImageViewer = ({ src, onClose }: { src: string; onClose: () => void }) => 
     );
 };
 
-const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName, username, userPhoto, startTime, onFinish, onExit }) => {
+const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName, username, userPhoto, startTime, examType, onFinish, onExit }) => {
   const [examQuestions, setExamQuestions] = useState<QuestionWithOptions[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, UserAnswerValue>>({});
@@ -273,6 +274,12 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                   <p className="text-[10px] text-slate-500 font-mono">{username}</p>
               </div>
 
+              {/* SUBJECT & EXAM TYPE (Info Soal) */}
+              <div className="hidden lg:flex flex-col items-end border-r border-slate-200 pr-4 mr-1">
+                  <p className="font-black text-indigo-600 text-sm">{exam.nama_ujian}</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{examType || 'Sumatif'}</p>
+              </div>
+
               <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-full border border-slate-200 transition">
                   <LayoutGrid size={20}/>
               </button>
@@ -299,13 +306,6 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                       </div>
 
                       <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
-                           {/* INFORMASI SOAL LABEL */}
-                           <div className="mb-6 pb-2 border-b border-slate-100">
-                               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                   <HelpCircle size={16}/> Informasi Soal
-                               </h3>
-                           </div>
-
                            {/* SPLIT LAYOUT CONTAINER */}
                            <div className={`flex flex-col lg:flex-row gap-8 h-full ${fontSize==='lg'?'text-2xl':fontSize==='sm'?'text-base':'text-lg'}`}>
                                 
@@ -318,6 +318,16 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                                                 <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1 backdrop-blur-sm"><Maximize size={12}/> Perbesar Gambar</span>
                                             </div>
                                         </div>
+                                        {/* Added Caption from Database */}
+                                        {currentQ.caption ? (
+                                            <p className="text-center text-blue-600 text-sm font-bold mt-3 leading-relaxed animate-in fade-in slide-in-from-top-2">
+                                                {currentQ.caption}
+                                            </p>
+                                        ) : (
+                                            <p className="text-center text-slate-400 text-xs font-medium mt-2 italic">
+                                                Klik gambar untuk memperbesar
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 

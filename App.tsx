@@ -641,6 +641,7 @@ function App() {
             username={currentUser.username}
             userPhoto={currentUser.photo_url}
             startTime={startTime}
+            examType={currentUser.exam_type || 'Sumatif'}
             onFinish={handleFinishExam}
             onExit={handleLogout}
         />

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, FileText, Download, Upload, Loader2, Plus, Search, Edit, Trash2, X, Camera, Save, User as UserIcon, Check, Wand2, UserCog, Database, LogIn } from 'lucide-react';
+import { Users, FileText, Download, Upload, Loader2, Plus, Search, Edit, Trash2, X, Camera, Save, User as UserIcon, Check, Wand2, UserCog, Database, LogIn, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../services/api';
 import { User } from '../../types';
 import * as XLSX from 'xlsx';
@@ -20,6 +20,7 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
     const [filterRole, setFilterRole] = useState('all'); 
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKelas, setFilterKelas] = useState('all');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -177,8 +178,14 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
             ); 
         } 
         if (currentUser.role === 'Guru') res = res.filter(u => u.role === 'siswa' && (u.school || '').toLowerCase() === (currentUser.kelas_id || '').toLowerCase()); 
-        return res; 
-    }, [users, filterRole, filterSchool, filterKelas, searchTerm, currentUser]);
+        
+        // Sort by Name
+        return res.sort((a, b) => {
+            const nameA = (a.fullname || a.username || '').toLowerCase();
+            const nameB = (b.fullname || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [users, filterRole, filterSchool, filterKelas, searchTerm, currentUser, sortOrder]);
     
     // ... (Export logic unchanged) ...
     const handleExport = () => { 
@@ -335,6 +342,9 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
                     <select className="p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-500 outline-none focus:border-indigo-500 bg-white cursor-pointer hover:border-slate-300 appearance-none" value={filterKelas} onChange={e => setFilterKelas(e.target.value)}><option value="all">Semua Kelas</option>{uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}</select>
                     </>
                 )}
+                <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-3 bg-white border-2 border-slate-100 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm w-[50px] flex items-center justify-center" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                    {sortOrder === 'asc' ? <ArrowDownAZ size={20}/> : <ArrowUpZA size={20}/>}
+                </button>
              </div>
 
              {/* DATABASE TABLE STRUCTURE */}

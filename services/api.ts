@@ -2,7 +2,7 @@
 import { User, Exam, QuestionWithOptions, QuestionRow, SchoolSchedule, LearningObjective, ExternalGrade } from '../types';
 
 // The Apps Script Web App URL provided
-const GAS_EXEC_URL = "https://script.google.com/macros/s/AKfycbxT2RvJSw7T9G557zrA0_nMWtzvAFN8hja56GDRc2yIvzJ8XWDHviUIeGN0HgnK9tQXvw/exec";
+const GAS_EXEC_URL = "https://script.google.com/macros/s/AKfycbyMHaMFXtHXvfK26XUykyxNeOv6PyXHifW0ezLD4NlcBDKmfye-gefZFf6m1YsMjOwDKA/exec";
 
 // Check if running inside GAS iframe
 const isEmbedded = typeof window !== 'undefined' && window.google && window.google.script;
@@ -180,6 +180,7 @@ export const api = {
         gambar: q.image || undefined,
         kelas: q.kelas || undefined, 
         tp_id: q.tp_id || undefined, 
+        caption: q.caption || undefined, // NEW
         options: Array.isArray(q.options) ? q.options.map((o: any, idx: number) => ({
             id: o.id || `opt-${i}-${idx}`,
             question_id: q.id || `Q${i+1}`,

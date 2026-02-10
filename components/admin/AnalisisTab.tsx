@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { BarChart3, FileText, Loader2, Filter, AlertCircle, Printer, Settings, Target } from 'lucide-react';
+import { BarChart3, FileText, Loader2, Filter, AlertCircle, Printer, Settings, Target, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../services/api';
 import { Exam, User, LearningObjective } from '../../types';
 
@@ -26,6 +26,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     const [materiInput, setMateriInput] = useState(''); // Materi
     const [kktp, setKktp] = useState(75); // KKTP Logic (Default 75) - Hidden from UI
     const [showConfig, setShowConfig] = useState(true); // Default open to encourage selection
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     // Helper Maps
     const userMap = useMemo(() => {
@@ -158,7 +159,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
         });
 
         // Parse JSON and Calculate Mastery
-        const rows = filtered.map(d => {
+        let rows = filtered.map(d => {
             let ansMap = {};
             try {
                 ansMap = typeof d.analisis === 'string' ? JSON.parse(d.analisis) : d.analisis || {};
@@ -177,6 +178,13 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
             };
         });
 
+        // Sort by Name
+        rows = rows.sort((a, b) => {
+            const nameA = (a.nama || a.username || '').toLowerCase();
+            const nameB = (b.nama || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+
         // Calculate Stats Per Question (Item Difficulty)
         const questionStats: Record<string, { correct: number, total: number }> = {};
         questionsData.forEach(q => { questionStats[q.id] = { correct: 0, total: 0 }; });
@@ -192,7 +200,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
         });
 
         return { rows, questionStats };
-    }, [resultsData, questionsData, filterClass, userMap, kktp, currentUser]);
+    }, [resultsData, questionsData, filterClass, userMap, kktp, currentUser, sortOrder]);
 
     const { rows, questionStats } = processedData;
 
@@ -407,6 +415,9 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                                 <Printer size={16}/> Cetak
                             </button>
                         )}
+                        <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm h-[38px] w-[38px] flex items-center justify-center" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                            {sortOrder === 'asc' ? <ArrowDownAZ size={18}/> : <ArrowUpZA size={18}/>}
+                        </button>
                     </div>
                 </div>
 

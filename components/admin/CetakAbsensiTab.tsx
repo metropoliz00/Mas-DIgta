@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Printer } from 'lucide-react';
+import { Printer, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../services/api';
 import { User, Exam } from '../../types';
 
@@ -11,6 +11,7 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKecamatan, setFilterKecamatan] = useState('all');
     const [filterClass, setFilterClass] = useState('all');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     
     // Config for Logos
     const [appConfig, setAppConfig] = useState<Record<string, string>>({});
@@ -43,7 +44,7 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
     }, [studentList]);
 
     const filteredStudents = useMemo(() => {
-        return studentList.filter(s => {
+        let res = studentList.filter(s => {
             if (currentUser.role === 'Guru') {
                 if ((s.school || '').toLowerCase() !== (currentUser.kelas_id || '').toLowerCase()) return false;
             } else {
@@ -54,7 +55,14 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
             if (filterClass !== 'all' && (s.kelas || '') !== filterClass) return false;
             return true;
         });
-    }, [studentList, currentUser, filterSchool, filterKecamatan, filterClass, selectedSession]);
+
+        // Sort by Name
+        return res.sort((a, b) => {
+            const nameA = (a.fullname || a.username || '').toLowerCase();
+            const nameB = (b.fullname || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [studentList, currentUser, filterSchool, filterKecamatan, filterClass, selectedSession, sortOrder]);
 
     const handlePrint = () => {
         if (filteredStudents.length === 0) return alert("Tidak ada data siswa untuk dicetak.");
@@ -172,7 +180,7 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-700"><Printer size={20}/> Cetak Daftar Hadir (Absensi)</h3>
              
              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div>
                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Mata Pelajaran</label>
                          <select className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100" value={selectedExamId} onChange={e => setSelectedExamId(e.target.value)}>
@@ -227,6 +235,13 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
                             <option value="all">Semua Kelas</option>
                             {uniqueClasses.map((s:any) => <option key={s} value={s}>Kelas {s}</option>)}
                         </select>
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                        <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm h-[38px] flex items-center justify-center" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                            {sortOrder === 'asc' ? <ArrowDownAZ size={18}/> : <ArrowUpZA size={18}/>}
+                        </button>
+                        <div className="text-xs font-bold text-slate-400">Sort Nama</div>
                     </div>
                 </div>
                 

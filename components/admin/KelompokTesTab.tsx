@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Group, Search, Save, Loader2, Filter, Target, ListChecks } from 'lucide-react';
+import { Group, Search, Save, Loader2, Filter, Target, ListChecks, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../services/api';
 import { User, Exam, LearningObjective } from '../../types';
 
@@ -24,6 +24,7 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKecamatan, setFilterKecamatan] = useState('all');
     const [filterClass, setFilterClass] = useState('all');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         api.getExams().then(setExams);
@@ -69,7 +70,7 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
     }, [selectedExam]);
 
     const filteredStudents = useMemo(() => {
-        return studentList.filter(s => {
+        let res = studentList.filter(s => {
             const matchName = (s.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                               (s.username || '').toLowerCase().includes(searchTerm.toLowerCase());
             
@@ -84,7 +85,14 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
 
             return matchName && matchFilter;
         });
-    }, [studentList, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass]);
+
+        // Sort by Name
+        return res.sort((a, b) => {
+            const nameA = (a.fullname || a.username || '').toLowerCase();
+            const nameB = (b.fullname || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [studentList, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass, sortOrder]);
 
     const handleSave = async () => {
         if (!selectedExam) return alert("Pilih ujian terlebih dahulu");
@@ -211,12 +219,17 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
                         </div>
                     </div>
                     
-                    <div className="lg:col-span-3">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Cari Peserta</label>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                            <input type="text" placeholder="Cari Username atau Nama..." className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm w-full outline-none focus:ring-2 focus:ring-indigo-100" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <div className="lg:col-span-3 flex items-end gap-2">
+                        <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Cari Peserta</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input type="text" placeholder="Cari Username atau Nama..." className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm w-full outline-none focus:ring-2 focus:ring-indigo-100" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            </div>
                         </div>
+                        <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm h-[38px] w-[38px] flex items-center justify-center" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                            {sortOrder === 'asc' ? <ArrowDownAZ size={18}/> : <ArrowUpZA size={18}/>}
+                        </button>
                     </div>
                 </div>
 

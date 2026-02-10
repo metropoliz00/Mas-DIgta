@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Monitor, Search, PlayCircle, Key, CheckCircle2, RefreshCw, Filter, UserX } from 'lucide-react';
+import { Monitor, Search, PlayCircle, Key, CheckCircle2, RefreshCw, Filter, UserX, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../services/api';
 import { User } from '../../types';
 
@@ -9,6 +9,7 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKecamatan, setFilterKecamatan] = useState('all');
     const [filterClass, setFilterClass] = useState('all');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [resetting, setResetting] = useState<string | null>(null);
 
     // Filter students ONLY (Exclude admin/guru from live monitor)
@@ -33,7 +34,7 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
     }, [onlyStudents]);
 
     const filtered = useMemo(() => { 
-        return onlyStudents.filter(s => { 
+        let res = onlyStudents.filter(s => { 
             // UPDATED: Use direct class property
             const sClass = s.kelas || '-';
             
@@ -55,8 +56,15 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
             if (filterClass !== 'all') matchFilter = matchFilter && sClass === filterClass;
 
             return matchName && matchFilter; 
-        }); 
-    }, [onlyStudents, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass]);
+        });
+
+        // Sort by Name
+        return res.sort((a, b) => {
+            const nameA = (a.fullname || a.username || '').toLowerCase();
+            const nameB = (b.fullname || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [onlyStudents, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass, sortOrder]);
 
     const handleReset = async (username: string) => { 
         if(!confirm(`Reset login untuk ${username}? Siswa akan logout otomatis and status menjadi OFFLINE.`)) return; 
@@ -91,14 +99,14 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                     <p className="text-slate-500 text-sm mt-1 font-medium">Pantau aktivitas peserta ujian secara realtime.</p>
                 </div>
                 
-                <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto z-10 flex-wrap">
+                <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto z-10 flex-wrap items-center">
                     {currentUser.role === 'admin' && (
                         <>
-                        <div className="relative group">
+                        <div className="relative group w-full md:w-auto">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16}/>
                             <select className="pl-10 pr-4 py-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 focus:bg-white bg-slate-50 transition-all cursor-pointer w-full md:w-36 appearance-none" value={filterKecamatan} onChange={e => setFilterKecamatan(e.target.value)}><option value="all">Semua Kec.</option>{uniqueKecamatans.map((s:any) => <option key={s} value={s}>{s}</option>)}</select>
                         </div>
-                        <div className="relative group">
+                        <div className="relative group w-full md:w-auto">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16}/>
                             <select 
                                 className="pl-10 pr-4 py-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 focus:bg-white bg-slate-50 transition-all cursor-pointer w-full md:w-40 appearance-none" 
@@ -116,7 +124,7 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                                 {uniqueSchools.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                        <div className="relative group">
+                        <div className="relative group w-full md:w-auto">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16}/>
                             <select className="pl-10 pr-4 py-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-indigo-500 focus:bg-white bg-slate-50 transition-all cursor-pointer w-full md:w-32 appearance-none" value={filterClass} onChange={e => setFilterClass(e.target.value)}><option value="all">Semua Kls</option>{uniqueClasses.map((s:any) => <option key={s} value={s}>Kelas {s}</option>)}</select>
                         </div>
@@ -126,6 +134,10 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
                         <input type="text" placeholder="Cari Nama / Username..." className="w-full pl-11 pr-4 py-3 border-2 border-slate-100 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 font-bold text-slate-700 placeholder-slate-400 transition-all bg-slate-50 focus:bg-white" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
                     </div>
+                    
+                    <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-3 bg-white border-2 border-slate-100 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                        {sortOrder === 'asc' ? <ArrowDownAZ size={20}/> : <ArrowUpZA size={20}/>}
+                    </button>
                 </div>
              </div>
 

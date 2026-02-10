@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileQuestion, Download, Upload, Loader2, Plus, Edit, Trash2, X, Save, Image as ImageIcon, CheckCircle2, ChevronDown, ChevronUp, Target, Layout } from 'lucide-react';
+import { FileQuestion, Download, Upload, Loader2, Plus, Edit, Trash2, X, Save, Image as ImageIcon, CheckCircle2, ChevronDown, ChevronUp, Target, Layout, Type } from 'lucide-react';
 import { api } from '../../services/api';
 import { QuestionRow, LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
@@ -104,6 +104,7 @@ const BankSoalTab = () => {
             text_soal: '',
             tipe_soal: 'PG',
             gambar: '',
+            caption: '', // Init Caption
             opsi_a: '',
             opsi_b: '',
             opsi_c: '',
@@ -169,7 +170,8 @@ const BankSoalTab = () => {
                         kunci_jawaban: String(row[8] || "").toUpperCase(),
                         bobot: Number(row[9] || 10),
                         kelas: String(row[10] || ""),
-                        tp_id: String(row[11] || "")
+                        tp_id: String(row[11] || ""),
+                        caption: String(row[12] || "") // Column 13 for Caption
                     });
                 }
 
@@ -264,7 +266,7 @@ const BankSoalTab = () => {
 
     const downloadTemplate = () => {
         const rows = [
-            { "ID Soal": "Q1", "Teks Soal": "Contoh Soal...", "Tipe Soal (PG/PGK/BS)": "PG", "Link Gambar": "", "Opsi A": "A", "Opsi B": "B", "Opsi C": "C", "Opsi D": "D", "Kunci Jawaban": "A", "Bobot": 10, "Kelas": "1", "ID TP": "TP-01" }
+            { "ID Soal": "Q1", "Teks Soal": "Contoh Soal...", "Tipe Soal (PG/PGK/BS)": "PG", "Link Gambar": "", "Opsi A": "A", "Opsi B": "B", "Opsi C": "C", "Opsi D": "D", "Kunci Jawaban": "A", "Bobot": 10, "Kelas": "1", "ID TP": "TP-01", "Caption (Keterangan Gambar)": "Deskripsi gambar..." }
         ];
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
@@ -357,7 +359,19 @@ const BankSoalTab = () => {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <div className="text-slate-800 font-medium text-sm leading-relaxed mb-2 pr-4">{q.text_soal}</div>
+                                        <div className="flex-1 pr-4">
+                                            <div className="text-slate-800 font-medium text-sm leading-relaxed mb-2">{q.text_soal}</div>
+                                            {isImage(q.gambar) && (
+                                                <div className="mt-2 mb-3">
+                                                    <img 
+                                                        src={q.gambar} 
+                                                        alt="Soal" 
+                                                        className="h-24 w-auto object-contain rounded-lg border border-slate-200 bg-slate-50 shadow-sm"
+                                                        loading="lazy" 
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="flex gap-2 shrink-0">
                                             <button onClick={() => handleEdit(q)} className="p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 rounded-lg transition"><Edit size={16}/></button>
                                             <button onClick={() => handleDelete(q.id)} className="p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-lg transition"><Trash2 size={16}/></button>
@@ -406,7 +420,8 @@ const BankSoalTab = () => {
                                         <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Kunci: {q.kunci_jawaban}</span>
                                         {q.kelas && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Kelas: {q.kelas}</span>}
                                         {q.tp_id && <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 flex items-center gap-1"><Target size={10}/> {q.tp_id}</span>}
-                                        {q.gambar && <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><ImageIcon size={10}/> Ada Gambar</span>}
+                                        {q.gambar && <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><ImageIcon size={10}/> Gambar</span>}
+                                        {q.caption && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate max-w-[150px]">Ket: {q.caption}</span>}
                                     </div>
                                 </div>
                             </div>
@@ -485,15 +500,22 @@ const BankSoalTab = () => {
                                     </div>
 
                                     {/* Image Input */}
-                                    <div className="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-slate-100 rounded border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                                            {isImage(currentQ.gambar) ? <img src={currentQ.gambar} className="w-full h-full object-cover"/> : <ImageIcon size={18} className="text-slate-400"/>}
+                                    <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-col gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-slate-100 rounded border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                                                {isImage(currentQ.gambar) ? <img src={currentQ.gambar} className="w-full h-full object-cover"/> : <ImageIcon size={18} className="text-slate-400"/>}
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase block">Gambar Soal</label>
+                                                <input type="text" className="w-full bg-transparent text-xs font-medium outline-none text-slate-600 placeholder-slate-300" value={currentQ.gambar} onChange={e => setCurrentQ({...currentQ, gambar: e.target.value})} placeholder="Link URL..." />
+                                            </div>
+                                            <label className="p-2 bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-100 transition"><Upload size={16}/><input type="file" className="hidden" onChange={(e) => handleImageUpload(e, 'gambar')} /></label>
                                         </div>
-                                        <div className="flex-1">
-                                            <label className="text-[9px] font-bold text-slate-400 uppercase block">Gambar Soal</label>
-                                            <input type="text" className="w-full bg-transparent text-xs font-medium outline-none text-slate-600 placeholder-slate-300" value={currentQ.gambar} onChange={e => setCurrentQ({...currentQ, gambar: e.target.value})} placeholder="Link URL..." />
+                                        {/* Added Caption Input */}
+                                        <div className="border-t border-slate-100 pt-2">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase block flex items-center gap-1"><Type size={10}/> Keterangan Gambar (Muncul di bawah gambar)</label>
+                                            <input type="text" className="w-full bg-slate-50 p-2 mt-1 rounded-lg text-xs font-medium outline-none text-slate-700 placeholder-slate-300 border border-transparent focus:border-indigo-200 focus:bg-white transition-all" value={currentQ.caption || ''} onChange={e => setCurrentQ({...currentQ, caption: e.target.value})} placeholder="Contoh: Perhatikan gambar di atas..." />
                                         </div>
-                                        <label className="p-2 bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-100 transition"><Upload size={16}/><input type="file" className="hidden" onChange={(e) => handleImageUpload(e, 'gambar')} /></label>
                                     </div>
                                 </div>
 

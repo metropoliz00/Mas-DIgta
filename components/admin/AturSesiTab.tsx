@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Clock, Search, Save, Loader2, Filter } from 'lucide-react';
+import { Clock, Search, Save, Loader2, Filter, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../services/api';
 import { User } from '../../types';
 
@@ -11,6 +11,7 @@ const AturSesiTab = ({ currentUser, students, refreshData, isLoading }: { curren
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKecamatan, setFilterKecamatan] = useState('all');
     const [filterClass, setFilterClass] = useState('all');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     // FILTER ONLY STUDENTS
     const studentList = useMemo(() => students.filter(s => s.role === 'siswa'), [students]);
@@ -33,7 +34,7 @@ const AturSesiTab = ({ currentUser, students, refreshData, isLoading }: { curren
     }, [studentList]);
 
     const filteredStudents = useMemo(() => {
-        return studentList.filter(s => {
+        let res = studentList.filter(s => {
             const matchName = (s.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                               (s.username || '').toLowerCase().includes(searchTerm.toLowerCase());
             
@@ -48,7 +49,14 @@ const AturSesiTab = ({ currentUser, students, refreshData, isLoading }: { curren
 
             return matchName && matchFilter;
         });
-    }, [studentList, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass]);
+
+        // Sort by Name
+        return res.sort((a, b) => {
+            const nameA = (a.fullname || a.username || '').toLowerCase();
+            const nameB = (b.fullname || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [studentList, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass, sortOrder]);
 
     const handleSave = async () => {
         if (!sessionInput) return alert("Pilih sesi");
@@ -129,9 +137,14 @@ const AturSesiTab = ({ currentUser, students, refreshData, isLoading }: { curren
                     </div>
                     <div className="flex flex-col gap-1 lg:col-span-4">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Cari Peserta</label>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                            <input type="text" placeholder="Cari Peserta..." className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm w-full outline-none focus:ring-2 focus:ring-indigo-100" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input type="text" placeholder="Cari Peserta..." className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm w-full outline-none focus:ring-2 focus:ring-indigo-100" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            </div>
+                            <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm w-10 flex items-center justify-center" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                                {sortOrder === 'asc' ? <ArrowDownAZ size={18}/> : <ArrowUpZA size={18}/>}
+                            </button>
                         </div>
                     </div>
                 </div>

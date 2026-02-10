@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Printer, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Printer, RefreshCw, ChevronDown, ChevronUp, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { User } from '../../types';
 import { api } from '../../services/api';
 
@@ -10,6 +10,7 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
     const [filterExamType, setFilterExamType] = useState('all'); // Changed from filterSession
     const [filterClass, setFilterClass] = useState('all');
     const [showAll, setShowAll] = useState(false);
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     
     const [localStudents, setLocalStudents] = useState<any[]>(students);
     const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +62,7 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
     }, [studentList]);
 
     const filteredStudents = useMemo(() => {
-        return studentList.filter(s => {
+        let res = studentList.filter(s => {
             if (currentUser.role === 'Guru') {
                 if ((s.school || '').toLowerCase() !== (currentUser.kelas_id || '').toLowerCase()) return false;
             } else {
@@ -74,7 +75,14 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
             if (filterClass !== 'all' && (s.kelas || '') !== filterClass) return false;
             return true;
         });
-    }, [studentList, currentUser, filterSchool, filterKecamatan, filterExamType, filterClass]);
+
+        // Sort by Name
+        return res.sort((a, b) => {
+            const nameA = (a.fullname || a.username || '').toLowerCase();
+            const nameB = (b.fullname || b.username || '').toLowerCase();
+            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [studentList, currentUser, filterSchool, filterKecamatan, filterExamType, filterClass, sortOrder]);
 
     // UPDATED LOGOS from CONFIG (Transparent fallback if empty)
     const transparentPixel = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -238,7 +246,7 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
              </div>
              
              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     {/* CHANGED: Filter Jenis Ujian instead of Session */}
                     <div>
                         <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Filter Jenis Ujian</label>
@@ -284,6 +292,12 @@ const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User
                             <option value="all">Semua Kelas</option>
                             {uniqueClasses.map((s:any) => <option key={s} value={s}>Kelas {s}</option>)}
                         </select>
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                        <button onClick={() => setSortOrder(p => p === 'asc' ? 'desc' : 'asc')} className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm h-[38px] flex items-center justify-center" title={sortOrder === 'asc' ? "Urutkan Z-A" : "Urutkan A-Z"}>
+                            {sortOrder === 'asc' ? <ArrowDownAZ size={18}/> : <ArrowUpZA size={18}/>}
+                        </button>
                     </div>
                 </div>
                 

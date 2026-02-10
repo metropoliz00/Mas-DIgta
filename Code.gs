@@ -456,7 +456,7 @@ function getRawQuestions(subject) {
   const sheetName = getQuestionsSheetName(subject);
   const sheet = getSheet(sheetName);
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID"]);
+    sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID", "Caption"]);
     return [];
   }
   const data = sheet.getDataRange().getDisplayValues();
@@ -467,7 +467,8 @@ function getRawQuestions(subject) {
     res.push({
       id: row[0], text_soal: row[1], tipe_soal: row[2], gambar: row[3],
       opsi_a: row[4], opsi_b: row[5], opsi_c: row[6], opsi_d: row[7],
-      kunci_jawaban: row[8], bobot: Number(row[9]), kelas: row[10], tp_id: row[11]
+      kunci_jawaban: row[8], bobot: Number(row[9]), kelas: row[10], tp_id: row[11],
+      caption: row[12] || ""
     });
   }
   return res;
@@ -495,7 +496,10 @@ function getQuestionsFromSheet(subject) {
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue; 
-    const q = { id: row[0], text: row[1], type: row[2], image: row[3], options: [], kelas: row[10], tp_id: row[11] };
+    const q = { 
+        id: row[0], text: row[1], type: row[2], image: row[3], 
+        options: [], kelas: row[10], tp_id: row[11], caption: row[12] || "" 
+    };
     if (q.type === 'PG' || q.type === 'PGK') {
       if (row[4]) q.options.push({ id: 'A', text: row[4] });
       if (row[5]) q.options.push({ id: 'B', text: row[5] });
@@ -514,11 +518,11 @@ function getQuestionsFromSheet(subject) {
 function saveQuestion(subject, q) {
   const sheetName = getQuestionsSheetName(subject);
   const sheet = getSheet(sheetName);
-  if (sheet.getLastRow() === 0) sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID"]);
+  if (sheet.getLastRow() === 0) sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID", "Caption"]);
   const data = sheet.getDataRange().getValues();
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(q.id)) { rowIndex = i + 1; break; } }
-  const rowData = [q.id, q.text_soal, q.tipe_soal, q.gambar, q.opsi_a, q.opsi_b, q.opsi_c, q.opsi_d, q.kunci_jawaban, q.bobot, q.kelas, q.tp_id];
+  const rowData = [q.id, q.text_soal, q.tipe_soal, q.gambar, q.opsi_a, q.opsi_b, q.opsi_c, q.opsi_d, q.kunci_jawaban, q.bobot, q.kelas, q.tp_id, q.caption || ""];
   if (rowIndex > 0) sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
   else sheet.appendRow(rowData);
   return { success: true };
@@ -535,8 +539,8 @@ function deleteQuestion(subject, id) {
 function importQuestions(subject, questions) {
   const sheetName = getQuestionsSheetName(subject);
   const sheet = getSheet(sheetName);
-  if (sheet.getLastRow() === 0) sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID"]);
-  const rows = questions.map(q => [q.id, q.text_soal, q.tipe_soal, q.gambar, q.opsi_a, q.opsi_b, q.opsi_c, q.opsi_d, q.kunci_jawaban, q.bobot, q.kelas, q.tp_id]);
+  if (sheet.getLastRow() === 0) sheet.appendRow(["ID", "Text", "Type", "Image", "OptA", "OptB", "OptC", "OptD", "Key", "Weight", "Kelas", "TP_ID", "Caption"]);
+  const rows = questions.map(q => [q.id, q.text_soal, q.tipe_soal, q.gambar, q.opsi_a, q.opsi_b, q.opsi_c, q.opsi_d, q.kunci_jawaban, q.bobot, q.kelas, q.tp_id, q.caption || ""]);
   if (rows.length > 0) sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   return { success: true };
 }
@@ -582,7 +586,11 @@ function assignTestGroup(usernames, examId, session, tpId, examType) {
   usernames.forEach(u => {
     const row = userRowMap[u];
     if (row) {
-      if (examId !== undefined && examId !== null) sheet.getRange(row, 11).setValue(examId); 
+      if (examId !== undefined && examId !== null) {
+          sheet.getRange(row, 11).setValue(examId); 
+          // Reset Status to OFFLINE if exam changes
+          sheet.getRange(row, 13).setValue('OFFLINE');
+      }
       if (session !== undefined && session !== null) sheet.getRange(row, 12).setValue(session);
       if (tpId !== undefined && tpId !== null) sheet.getRange(row, 15).setValue(tpId);
       if (examType !== undefined && examType !== null) sheet.getRange(row, 16).setValue(examType);
