@@ -17,6 +17,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
     // Default collapsed set to TRUE
     const [isDbCollapsed, setIsDbCollapsed] = useState(true);
 
+    // Create a User Lookup Map for Real-time Data in Feed
+    const userLookup = useMemo(() => {
+        const map: Record<string, any> = {};
+        if (dashboardData.allUsers) {
+            dashboardData.allUsers.forEach((u: any) => {
+                map[u.username] = u;
+            });
+        }
+        return map;
+    }, [dashboardData.allUsers]);
+
     // FILTER ONLY STUDENTS FOR MAIN STATS
     const studentUsers = useMemo(() => {
         return (dashboardData.allUsers || []).filter((u: any) => u.role === 'siswa');
@@ -387,6 +398,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
 
                             const hasSubject = log.subject && log.subject !== '-' && log.subject !== 'Success';
                             
+                            // REALTIME DATA LOOKUP (Ensure School implies Kecamatan)
+                            const userDetail = userLookup[log.username];
+                            const currentSchool = userDetail?.school || log.school || '-';
+                            const currentKecamatan = userDetail?.kecamatan || log.kecamatan || '-';
+                            const currentName = userDetail?.fullname || log.fullname || log.username;
+
                             return (
                                 <div key={i} className="flex items-start gap-4 p-4 hover:bg-slate-50 rounded-xl transition border-b border-slate-50 last:border-0 group">
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${bgClass} ${textClass}`}>
@@ -394,18 +411,21 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">
-                                            <p className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">{log.fullname}</p>
+                                            {/* NAMA LENGKAP */}
+                                            <p className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">{currentName}</p>
                                             <span className="text-[10px] font-mono text-slate-400 shrink-0 ml-2 bg-slate-100 px-2 py-0.5 rounded">{new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', hour12: false})}</span>
                                         </div>
                                         
                                         <div className="text-xs text-slate-500 mb-2 flex flex-col gap-1">
+                                            {/* SEKOLAH */}
                                             <div className="flex items-center gap-2" title="Sekolah">
                                                 <School size={12} className="text-slate-400 shrink-0"/>
-                                                <span className="truncate font-semibold">{log.school || '-'}</span>
+                                                <span className="truncate font-semibold">{currentSchool}</span>
                                             </div>
+                                            {/* KECAMATAN */}
                                             <div className="flex items-center gap-2" title="Kecamatan">
                                                 <MapPin size={12} className="text-slate-400 shrink-0"/>
-                                                <span className="truncate font-medium">{log.kecamatan || '-'}</span>
+                                                <span className="truncate font-medium">{currentKecamatan}</span>
                                             </div>
                                         </div>
 
@@ -496,8 +516,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                         <thead className="bg-slate-50 font-bold text-slate-500 uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th className="p-4 border-b border-slate-200 text-center w-16">Kelas</th>
-                                <th className="p-4 border-b border-slate-200">Sekolah</th>
-                                <th className="p-4 border-b border-slate-200">Kecamatan</th>
+                                <th className="p-4 border-b border-slate-200">Sekolah & Kecamatan</th>
                                 <th className="p-4 border-b border-slate-200 text-center">Total Siswa</th>
                                 <th className="p-4 border-b border-slate-200 text-center text-slate-400">Belum Login</th>
                                 <th className="p-4 border-b border-slate-200 text-center text-yellow-600">Login</th>
@@ -510,8 +529,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                                 classStats.map((stat, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                                         <td className="p-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{stat.level}</td>
-                                        <td className="p-4 font-bold text-slate-700">{stat.name}</td>
-                                        <td className="p-4 text-slate-600 text-xs font-medium">{stat.kecamatan}</td>
+                                        <td className="p-4 font-bold text-slate-700">
+                                            {stat.name}
+                                            <div className="text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-wide">
+                                                {stat.kecamatan}
+                                            </div>
+                                        </td>
                                         <td className="p-4 text-center font-bold text-slate-800 bg-slate-50">{stat.total}</td>
                                         <td className="p-4 text-center font-mono text-slate-400">{stat.offline}</td>
                                         <td className="p-4 text-center font-mono text-yellow-600 font-bold bg-yellow-50/50">{stat.login}</td>
@@ -521,7 +544,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={8} className="p-8 text-center text-slate-400 italic">Tidak ada data kelas ditemukan.</td>
+                                    <td colSpan={7} className="p-8 text-center text-slate-400 italic">Tidak ada data kelas ditemukan.</td>
                                 </tr>
                             )}
                         </tbody>

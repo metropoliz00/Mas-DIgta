@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Check, ChevronLeft, ChevronRight, LayoutGrid, Flag, Monitor, LogOut, Loader2, AlertTriangle, X, ShieldAlert, RotateCcw, ZoomIn, ZoomOut, Maximize, Move, HelpCircle } from 'lucide-react';
+import { Clock, Check, ChevronLeft, ChevronRight, LayoutGrid, Flag, Monitor, LogOut, Loader2, AlertTriangle, X, ShieldAlert, RotateCcw, ZoomIn, ZoomOut, Maximize, Move, HelpCircle, User } from 'lucide-react';
 import { QuestionWithOptions, UserAnswerValue, Exam } from '../types';
 import { api } from '../services/api';
 
@@ -239,11 +239,11 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
           </div>
       )}
 
-      {/* HEADER - UPDATED BRANDING */}
-      <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm relative h-auto">
+      {/* HEADER - UPDATED BRANDING & USER IDENTITY */}
+      <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-2 flex items-center justify-between shrink-0 z-20 shadow-sm relative h-auto">
           {/* LEFT: BRANDING */}
           <div className="flex items-center gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md shadow-slate-200 border border-slate-100 overflow-hidden relative shrink-0">
+              <div className="w-10 h-10 md:w-11 md:h-11 bg-white rounded-xl flex items-center justify-center shadow-md shadow-slate-200 border border-slate-100 overflow-hidden relative shrink-0">
                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-white"></div>
                    {schoolLogo ? (
                        <img src={schoolLogo} className="w-full h-full object-contain p-1 relative z-10" alt="Logo" />
@@ -251,7 +251,7 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                        <div className="font-black text-indigo-600 text-xl relative z-10">M</div>
                    )}
               </div>
-              <div className="leading-tight">
+              <div className="leading-tight hidden sm:block">
                   <h1 className="font-black text-lg md:text-xl text-slate-800 tracking-tighter">
                       MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">DIGTA</span>
                   </h1>
@@ -261,20 +261,19 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
               </div>
           </div>
 
-          {/* CENTER: EXAM NAME & PROGRESS (Hidden on Mobile) */}
-          <div className="hidden lg:flex flex-col items-center absolute left-1/2 -translate-x-1/2">
-               <h2 className="font-bold text-slate-700 text-sm mb-1 px-3 py-0.5 bg-slate-50 rounded-md border border-slate-100 shadow-sm">{exam.nama_ujian}</h2>
-               <div className="h-1.5 w-48 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-               </div>
-          </div>
-
-          {/* RIGHT: TIMER & TOGGLE */}
-          <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-mono font-bold text-sm md:text-lg border ${timeLeft < 300 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+          {/* RIGHT: TIMER, IDENTITY & TOGGLE */}
+          <div className="flex items-center gap-4">
+              <div className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full font-mono font-bold text-sm md:text-lg border shadow-sm ${timeLeft < 300 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-white border-slate-200 text-slate-700'}`}>
                   <Clock size={18} className="shrink-0"/> {formatTime(timeLeft)}
               </div>
-              <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg border border-slate-200 transition">
+              
+              {/* USER IDENTITY */}
+              <div className="hidden md:flex flex-col items-end border-r border-slate-200 pr-4 mr-1">
+                  <p className="font-bold text-slate-800 text-sm">{userFullName}</p>
+                  <p className="text-[10px] text-slate-500 font-mono">{username}</p>
+              </div>
+
+              <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-full border border-slate-200 transition">
                   <LayoutGrid size={20}/>
               </button>
           </div>
@@ -282,89 +281,134 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
 
       {/* MAIN CONTENT - SPLIT LAYOUT */}
       <div className="flex-1 flex overflow-hidden relative">
-          <main className="flex-1 overflow-y-auto bg-slate-100 p-2 md:p-3 pb-24">
+          <main className="flex-1 overflow-y-auto bg-slate-100 p-2 md:p-4 pb-28">
               <div className="w-full h-full flex flex-col">
                   {/* Question Card - UPDATED: Constrained Max Width */}
-                  <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex-1 flex flex-col w-full max-w-5xl mx-auto">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col w-full max-w-6xl mx-auto">
                       {/* Question Toolbar */}
                       <div className="h-14 border-b border-slate-100 flex items-center justify-between px-4 bg-slate-50/50 shrink-0">
-                          <div className="flex items-center gap-2">
-                              <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-md shadow-sm">No. {currentIdx + 1}</span>
+                          <div className="flex items-center gap-3">
+                              <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm shadow-indigo-200">Soal No. {currentIdx + 1}</span>
                               <span className="text-xs font-bold text-slate-400">/ {examQuestions.length}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                              <button onClick={() => setFontSize('sm')} className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition ${fontSize==='sm'?'bg-white shadow text-indigo-600':'text-slate-400'}`}>A-</button>
-                              <button onClick={() => setFontSize('md')} className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition ${fontSize==='md'?'bg-white shadow text-indigo-600':'text-slate-400'}`}>A</button>
-                              <button onClick={() => setFontSize('lg')} className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition ${fontSize==='lg'?'bg-white shadow text-indigo-600':'text-slate-400'}`}>A+</button>
+                              <button onClick={() => setFontSize('sm')} className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold transition ${fontSize==='sm'?'bg-white shadow text-indigo-600 ring-1 ring-slate-200':'text-slate-400 hover:bg-slate-100'}`}>A-</button>
+                              <button onClick={() => setFontSize('md')} className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold transition ${fontSize==='md'?'bg-white shadow text-indigo-600 ring-1 ring-slate-200':'text-slate-400 hover:bg-slate-100'}`}>A</button>
+                              <button onClick={() => setFontSize('lg')} className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold transition ${fontSize==='lg'?'bg-white shadow text-indigo-600 ring-1 ring-slate-200':'text-slate-400 hover:bg-slate-100'}`}>A+</button>
                           </div>
                       </div>
 
                       <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
-                           <div className={`prose max-w-none text-slate-800 leading-relaxed ${fontSize==='lg'?'text-3xl':fontSize==='sm'?'text-lg':'text-xl'}`}>
-                                {/* Image Display */}
+                           {/* INFORMASI SOAL LABEL */}
+                           <div className="mb-6 pb-2 border-b border-slate-100">
+                               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                   <HelpCircle size={16}/> Informasi Soal
+                               </h3>
+                           </div>
+
+                           {/* SPLIT LAYOUT CONTAINER */}
+                           <div className={`flex flex-col lg:flex-row gap-8 h-full ${fontSize==='lg'?'text-2xl':fontSize==='sm'?'text-base':'text-lg'}`}>
+                                
+                                {/* LEFT SIDE: IMAGE (If Exists) */}
                                 {currentQ.gambar && (
-                                    <div className="mb-6 rounded-xl border-2 border-slate-100 p-2 bg-slate-50 w-fit max-w-full mx-auto relative group">
-                                        <img src={currentQ.gambar} className="max-h-[400px] object-contain rounded-lg cursor-zoom-in" onClick={() => setZoomedImage(currentQ.gambar!)} />
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none">
-                                            <span className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1"><Maximize size={12}/> Perbesar</span>
+                                    <div className="lg:w-1/3 shrink-0">
+                                        <div className="rounded-xl border border-slate-200 p-2 bg-slate-50 relative group shadow-sm sticky top-0">
+                                            <img src={currentQ.gambar} className="w-full h-auto max-h-[500px] object-contain rounded-lg cursor-zoom-in bg-white" onClick={() => setZoomedImage(currentQ.gambar!)} />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none">
+                                                <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1 backdrop-blur-sm"><Maximize size={12}/> Perbesar Gambar</span>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
-                                {/* Question Text */}
-                                <div className="mb-8 whitespace-pre-wrap font-medium">{currentQ.text_soal}</div>
-                                
-                                {/* Options - Grid layout for better use of width */}
-                                <div className="space-y-4">
-                                    {currentQ.tipe_soal === 'PG' && (
-                                        <div className="grid grid-cols-1 gap-4">
-                                            {currentQ.options.map((opt, i) => {
-                                                const isSel = answers[currentQ.id] === opt.id;
-                                                return (
-                                                    <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PG')} 
-                                                         className={`flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm ring-1 ring-indigo-200' : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'}`}>
-                                                        <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${isSel ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600'}`}>
-                                                            {String.fromCharCode(65 + i)}
-                                                        </div>
-                                                        <div className="pt-1.5 flex-1 font-medium text-slate-700">
-                                                            {opt.text_jawaban.startsWith('http') ? <img src={opt.text_jawaban} className="h-24 rounded border border-slate-200" /> : opt.text_jawaban}
-                                                        </div>
-                                                        {isSel && <Check className="text-indigo-600 mt-1" size={24} />}
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
-                                    
-                                    {currentQ.tipe_soal === 'PGK' && currentQ.options.map((opt) => {
-                                        const curr = (answers[currentQ.id] as string[]) || [];
-                                        const isSel = curr.includes(opt.id);
-                                        return (
-                                            <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PGK')} 
-                                                 className={`flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-slate-200 hover:border-indigo-200'}`}>
-                                                <div className={`w-8 h-8 shrink-0 rounded border-2 flex items-center justify-center mt-1 transition-colors ${isSel ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
-                                                    {isSel && <Check size={18} strokeWidth={3} />}
-                                                </div>
-                                                <div className="flex-1 font-medium text-slate-700">{opt.text_jawaban}</div>
-                                            </div>
-                                        )
-                                    })}
 
-                                    {currentQ.tipe_soal === 'BS' && (
-                                        <div className="border border-slate-200 rounded-xl overflow-hidden">
-                                            {currentQ.options.map((opt, i) => {
-                                                const val = (answers[currentQ.id] as Record<string, boolean>)?.[opt.id];
-                                                return (
-                                                    <div key={opt.id} className={`p-5 flex flex-col sm:flex-row items-center gap-6 ${i % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
-                                                        <div className="flex-1 font-medium text-slate-800 text-center sm:text-left">{opt.text_jawaban}</div>
-                                                        <div className="flex gap-3 shrink-0">
-                                                            <button onClick={() => handleAnswer(true, 'BS', opt.id)} className={`px-6 py-3 rounded-xl font-bold border transition ${val === true ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>BENAR</button>
-                                                            <button onClick={() => handleAnswer(false, 'BS', opt.id)} className={`px-6 py-3 rounded-xl font-bold border transition ${val === false ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-rose-600 border-rose-200 hover:bg-rose-50'}`}>SALAH</button>
+                                {/* RIGHT SIDE: CONTENT & OPTIONS */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="prose max-w-none text-slate-800 leading-relaxed mb-8 font-medium">
+                                        {currentQ.text_soal}
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        {currentQ.tipe_soal === 'PG' && (
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {currentQ.options.map((opt, i) => {
+                                                    const isSel = answers[currentQ.id] === opt.id;
+                                                    return (
+                                                        <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PG')} 
+                                                             className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm ring-1 ring-indigo-200' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}`}>
+                                                            <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-bold text-lg transition-colors border-2 ${isSel ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 text-slate-500 group-hover:border-indigo-400 group-hover:text-indigo-600'}`}>
+                                                                {String.fromCharCode(65 + i)}
+                                                            </div>
+                                                            <div className="pt-1.5 flex-1 font-medium text-slate-700">
+                                                                {opt.text_jawaban.startsWith('http') ? <img src={opt.text_jawaban} className="h-24 rounded border border-slate-200" /> : opt.text_jawaban}
+                                                            </div>
+                                                            {isSel && <div className="bg-indigo-600 text-white rounded-full p-1 mt-1"><Check size={16} /></div>}
                                                         </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+                                        
+                                        {currentQ.tipe_soal === 'PGK' && currentQ.options.map((opt) => {
+                                            const curr = (answers[currentQ.id] as string[]) || [];
+                                            const isSel = curr.includes(opt.id);
+                                            return (
+                                                <div key={opt.id} onClick={() => handleAnswer(opt.id, 'PGK')} 
+                                                     className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${isSel ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-slate-200 hover:border-indigo-300'}`}>
+                                                    <div className={`w-8 h-8 shrink-0 rounded-lg border-2 flex items-center justify-center mt-1 transition-colors ${isSel ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
+                                                        {isSel && <Check size={18} strokeWidth={3} />}
                                                     </div>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
+                                                    <div className="flex-1 font-medium text-slate-700">{opt.text_jawaban}</div>
+                                                </div>
+                                            )
+                                        })}
+
+                                        {/* TABEL BENAR - SALAH */}
+                                        {currentQ.tipe_soal === 'BS' && (
+                                            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                                <table className="w-full text-left">
+                                                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-200">
+                                                        <tr>
+                                                            <th className="p-4">Pernyataan</th>
+                                                            <th className="p-4 w-24 text-center border-l border-slate-200">Benar</th>
+                                                            <th className="p-4 w-24 text-center border-l border-slate-200">Salah</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                                        {currentQ.options.map((opt, i) => {
+                                                            const val = (answers[currentQ.id] as Record<string, boolean>)?.[opt.id];
+                                                            return (
+                                                                <tr key={opt.id} className="hover:bg-slate-50/50">
+                                                                    <td className="p-4 font-medium text-slate-700">{opt.text_jawaban}</td>
+                                                                    <td className="p-4 text-center border-l border-slate-100 bg-emerald-50/10">
+                                                                        <label className="cursor-pointer flex justify-center items-center h-full w-full">
+                                                                            <input 
+                                                                                type="radio" 
+                                                                                name={`bs-${currentQ.id}-${opt.id}`}
+                                                                                checked={val === true}
+                                                                                onChange={() => handleAnswer(true, 'BS', opt.id)}
+                                                                                className="w-6 h-6 text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
+                                                                            />
+                                                                        </label>
+                                                                    </td>
+                                                                    <td className="p-4 text-center border-l border-slate-100 bg-rose-50/10">
+                                                                        <label className="cursor-pointer flex justify-center items-center h-full w-full">
+                                                                            <input 
+                                                                                type="radio" 
+                                                                                name={`bs-${currentQ.id}-${opt.id}`}
+                                                                                checked={val === false}
+                                                                                onChange={() => handleAnswer(false, 'BS', opt.id)}
+                                                                                className="w-6 h-6 text-rose-600 focus:ring-rose-500 border-slate-300 cursor-pointer"
+                                                                            />
+                                                                        </label>
+                                                                    </td>
+                                                                </tr>
+                                                            )
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                            </div>
                       </div>
@@ -373,25 +417,25 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
           </main>
       </div>
 
-      {/* FOOTER NAV */}
-      <footer className="h-20 bg-white border-t border-slate-200 px-4 md:px-8 flex items-center justify-between shrink-0 z-30 fixed bottom-0 w-full lg:w-auto lg:static">
-          <button onClick={() => setCurrentIdx(p => Math.max(0, p - 1))} disabled={currentIdx === 0} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition flex items-center gap-2 border border-slate-200">
-              <ChevronLeft size={18}/> Prev
+      {/* FOOTER NAV - UPDATED BUTTON COLORS & ROUNDED */}
+      <footer className="h-24 bg-white border-t border-slate-200 px-4 md:px-8 flex items-center justify-between shrink-0 z-30 fixed bottom-0 w-full lg:w-auto lg:static shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
+          <button onClick={() => setCurrentIdx(p => Math.max(0, p - 1))} disabled={currentIdx === 0} className="px-6 py-3 rounded-full font-bold text-white bg-rose-500 hover:bg-rose-600 disabled:opacity-30 disabled:bg-slate-300 transition flex items-center gap-2 shadow-lg shadow-rose-200 disabled:shadow-none active:scale-95">
+              <ChevronLeft size={20}/> Sebelumnya
           </button>
           
-          <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition select-none ${doubtful[currentQ.id] ? 'bg-amber-100 text-amber-700' : 'text-slate-400 hover:text-amber-500'}`}>
+          <label className={`flex items-center gap-3 px-6 py-3 rounded-full cursor-pointer transition select-none border-2 active:scale-95 ${doubtful[currentQ.id] ? 'bg-amber-400 border-amber-400 text-white shadow-lg shadow-amber-200' : 'bg-white border-amber-200 text-amber-500 hover:bg-amber-50'}`}>
               <input type="checkbox" className="hidden" checked={!!doubtful[currentQ.id]} onChange={() => setDoubtful(p => ({...p, [currentQ.id]: !p[currentQ.id]}))} />
-              <Flag size={20} className={doubtful[currentQ.id] ? "fill-amber-600" : ""} />
+              <Flag size={20} className={doubtful[currentQ.id] ? "fill-white" : "fill-amber-500"} />
               <span className="font-bold text-sm hidden sm:inline">Ragu-ragu</span>
           </label>
 
           {isLast ? (
-              <button onClick={() => setShowConfirmFinish(true)} className="px-6 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition flex items-center gap-2">
-                  Selesai <Check size={18}/>
+              <button onClick={() => setShowConfirmFinish(true)} className="px-8 py-3 rounded-full font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition flex items-center gap-2 active:scale-95">
+                  Selesai <Check size={20}/>
               </button>
           ) : (
-              <button onClick={() => setCurrentIdx(p => Math.min(examQuestions.length - 1, p + 1))} className="px-5 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition flex items-center gap-2">
-                  Next <ChevronRight size={18}/>
+              <button onClick={() => setCurrentIdx(p => Math.min(examQuestions.length - 1, p + 1))} className="px-6 py-3 rounded-full font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition flex items-center gap-2 active:scale-95">
+                  Selanjutnya <ChevronRight size={20}/>
               </button>
           )}
       </footer>
@@ -412,11 +456,11 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                       
                       let bg = "bg-white border-slate-200 text-slate-600";
                       if (isAct) bg = "bg-indigo-600 border-indigo-600 text-white ring-2 ring-indigo-200";
-                      else if (isDbt) bg = "bg-amber-100 border-amber-300 text-amber-700";
+                      else if (isDbt) bg = "bg-amber-400 border-amber-400 text-white";
                       else if (isAns) bg = "bg-slate-800 border-slate-800 text-white";
 
                       return (
-                          <button key={q.id} onClick={() => { setCurrentIdx(i); setIsSidebarOpen(false); }} className={`aspect-square rounded-lg border font-bold text-sm transition-all hover:scale-105 ${bg}`}>
+                          <button key={q.id} onClick={() => { setCurrentIdx(i); setIsSidebarOpen(false); }} className={`aspect-square rounded-xl border font-bold text-sm transition-all hover:scale-105 ${bg}`}>
                               {i + 1}
                           </button>
                       )
@@ -424,9 +468,9 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
               </div>
           </div>
           <div className="p-4 bg-slate-50 text-xs font-medium text-slate-500 space-y-2 border-t border-slate-100">
-              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-indigo-600 rounded"></span> Sedang Dikerjakan</div>
-              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-slate-800 rounded"></span> Sudah Dijawab</div>
-              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-amber-100 border border-amber-300 rounded"></span> Ragu-ragu</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-indigo-600 rounded-full"></span> Sedang Dikerjakan</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-slate-800 rounded-full"></span> Sudah Dijawab</div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-amber-400 rounded-full"></span> Ragu-ragu</div>
           </div>
       </div>
 

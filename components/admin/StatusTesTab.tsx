@@ -129,8 +129,7 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                                  <th className="p-3 md:p-5 border-b border-slate-200">Username</th>
                                  <th className="p-3 md:p-5 border-b border-slate-200">Nama Peserta</th>
                                  <th className="p-3 md:p-5 border-b border-slate-200 text-center w-16">Kelas</th>
-                                 <th className="p-3 md:p-5 border-b border-slate-200">Sekolah</th>
-                                 <th className="p-3 md:p-5 border-b border-slate-200">Kecamatan</th>
+                                 <th className="p-3 md:p-5 border-b border-slate-200">Sekolah & Kecamatan</th>
                                  <th className="p-3 md:p-5 border-b border-slate-200 text-center">Status</th>
                                  <th className="p-3 md:p-5 border-b border-slate-200 text-center">Ujian Aktif</th>
                                  <th className="p-3 md:p-5 border-b border-slate-200 text-center">Aksi</th>
@@ -138,14 +137,16 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
                          </thead>
                          <tbody className="divide-y divide-slate-100">
                              {filtered.length === 0 ? 
-                                <tr><td colSpan={8} className="p-12 text-center text-slate-400 font-medium italic bg-slate-50/30">Tidak ada data peserta (Siswa) yang cocok.</td></tr> 
+                                <tr><td colSpan={7} className="p-12 text-center text-slate-400 font-medium italic bg-slate-50/30">Tidak ada data peserta (Siswa) yang cocok.</td></tr> 
                                 : filtered.map((s, i) => (
                                 <tr key={i} className="hover:bg-slate-50/80 transition-colors group">
                                     <td className="p-3 md:p-5 font-mono text-slate-500 font-bold">{s.username}</td>
                                     <td className="p-3 md:p-5 font-bold text-slate-800">{s.fullname}</td>
                                     <td className="p-3 md:p-5 text-center font-bold text-indigo-600 bg-indigo-50/30">{getClass(s.school)}</td>
-                                    <td className="p-3 md:p-5 text-slate-600">{s.school}</td>
-                                    <td className="p-3 md:p-5 text-slate-600">{s.kecamatan || '-'}</td>
+                                    <td className="p-3 md:p-5 text-slate-600">
+                                        <div className="font-bold">{s.school}</div>
+                                        <div className="text-[10px] text-slate-500 uppercase tracking-wide">{s.kecamatan || '-'}</div>
+                                    </td>
                                     <td className="p-3 md:p-5 text-center">{renderStatusBadge(s.status)}</td>
                                     <td className="p-3 md:p-5 text-center">
                                         {s.active_exam && s.active_exam !== '-' ? (

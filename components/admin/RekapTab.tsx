@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
@@ -173,16 +174,22 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
             if (row) {
                 const score = parseFloat(d.nilai) || 0;
                 
-                // PRIORITAS UTAMA: Gunakan Jenis Ujian (Exam Type) jika ada
+                // LOGIC: Map Exam Type to Column Key using Regex for robustness
                 let colKey = '';
                 const eType = (d.exam_type || '').toLowerCase().trim();
                 
                 if (eType) {
-                    if (eType.includes('sumatif 1')) colKey = 'sumatif1';
-                    else if (eType.includes('sumatif 2')) colKey = 'sumatif2';
-                    else if (eType.includes('sumatif 3')) colKey = 'sumatif3';
-                    else if (eType.includes('sumatif 4')) colKey = 'sumatif4';
-                    else if (eType.includes('akhir') || eType.includes('sas')) colKey = 'sas';
+                    // Cek pola: "Sumatif 1", "PH 1", "Lingkup Materi 1", atau diakhiri " 1"
+                    if (/sumatif\s*1$|ph\s*1$|lingkup materi\s*1$/.test(eType) || eType === 'sumatif 1') colKey = 'sumatif1';
+                    else if (/sumatif\s*2$|ph\s*2$|lingkup materi\s*2$/.test(eType) || eType === 'sumatif 2') colKey = 'sumatif2';
+                    
+                    // Sumatif 3 / Tengah Semester (STS)
+                    else if (/sumatif\s*3$|ph\s*3$|lingkup materi\s*3$|tengah semester|sts/.test(eType) || eType === 'sumatif 3') colKey = 'sumatif3';
+                    
+                    else if (/sumatif\s*4$|ph\s*4$|lingkup materi\s*4$/.test(eType) || eType === 'sumatif 4') colKey = 'sumatif4';
+                    
+                    // Akhir Semester (SAS/PAS/UAS)
+                    else if (eType.includes('akhir') || eType.includes('sas') || eType.includes('pas') || eType.includes('uas')) colKey = 'sas';
                 }
                 
                 // Fallback: Jika Exam Type kosong, gunakan Nama Mapel (Legacy)
@@ -202,9 +209,11 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                     if (editedCells[editKey]) {
                         row[colKey] = editedCells[editKey].val;
                     } else {
-                        // Priority to latest data (first in array). 
-                        // Only set if not already set (meaning newer data takes precedence if we iterate new->old)
-                        if (row[colKey] === '-') row[colKey] = score;
+                        // Priority to latest data. Data is sorted newest first.
+                        // Only set if not already set (meaning we found the most recent one first).
+                        if (row[colKey] === '-') {
+                            row[colKey] = score;
+                        }
                     }
                 }
             }
@@ -243,7 +252,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
             const [username, field] = key.split('_');
             const val = parseFloat(editedCells[key].val);
             if (!isNaN(val)) {
-                // Map field key back to proper Exam Type Name
+                // Map field key back to proper Exam Type Name for DB storage
                 let examType = '';
                 if(field === 'sumatif1') examType = 'Sumatif 1';
                 else if(field === 'sumatif2') examType = 'Sumatif 2';
