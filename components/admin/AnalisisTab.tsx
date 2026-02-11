@@ -24,7 +24,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     const [tpId, setTpId] = useState(''); // ID TP Selection
     const [tpInput, setTpInput] = useState(''); // Deskripsi TP
     const [materiInput, setMateriInput] = useState(''); // Materi
-    const [kktp, setKktp] = useState(75); // KKTP Logic (Default 75) - Hidden from UI
+    const [kktp, setKktp] = useState(75); // KKTP Logic (Default 75) - Will be updated from config
     const [showConfig, setShowConfig] = useState(true); // Default open to encourage selection
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -51,6 +51,15 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
         const loadConfigs = async () => {
             try {
                 const gConfig = await api.getAppConfig();
+                
+                // Update KKTP from Server Config if available
+                if (gConfig['KKTP']) {
+                    const serverKktp = Number(gConfig['KKTP']);
+                    if (!isNaN(serverKktp)) {
+                        setKktp(serverKktp);
+                    }
+                }
+
                 let combinedConfig = { ...gConfig };
                 
                 // If Guru, merge with personal config to get specific Jabatan/Settings
@@ -166,6 +175,10 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
             } catch (e) { console.error("JSON Parse Error", e); }
             
             const score = parseFloat(d.nilai) || 0;
+            
+            // LOGIKA KETUNTASAN:
+            // Jika nilai >= KKTP -> Tuntas -> Pengayaan
+            // Jika nilai < KKTP -> Tidak Tuntas -> Remidi
             const isTuntas = score >= kktp;
 
             return { 
@@ -473,7 +486,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                             )}
                         </div>
                         <div className="mt-3 text-[10px] text-slate-400 italic">
-                            * Data Sekolah, Kepala Sekolah, dan Guru diambil otomatis dari menu <b>Konfigurasi</b>.
+                            * Data Sekolah, Kepala Sekolah, dan Guru diambil otomatis dari menu <b>Konfigurasi</b>. KKTP Aktif: {kktp}
                         </div>
                     </div>
                 )}
