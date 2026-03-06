@@ -22,23 +22,33 @@ const formatGoogleDriveUrl = (url?: string): string | undefined => {
 export const api = {
   login: async (username: string, password?: string): Promise<{user: User | null, error?: string}> => {
     console.log("Attempting login for:", username);
-    const { data, error } = await supabase
+    
+    // Debug: Fetch user by username only first to check if user exists and what the password looks like
+    const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('*')
-      .eq('username', username)
-      .eq('password', password);
+      .select('username, password, role, fullname, gender, kelas, school, kecamatan, active_exam, session, photo_url, active_tp, exam_type')
+      .eq('username', username);
 
-    if (error) {
-        console.error("Supabase login error:", error);
-        return { user: null, error: error.message };
+    if (userError) {
+        console.error("Supabase login error:", userError);
+        return { user: null, error: userError.message };
     }
     
-    if (!data || data.length === 0) {
-        console.log("No user found with provided credentials.");
+    if (!userData || userData.length === 0) {
+        console.log("No user found with username:", username);
         return { user: null, error: "Username atau password salah." };
     }
     
-    const dataRow = data[0];
+    const dataRow = userData[0];
+    
+    // Debug: Compare passwords
+    console.log("Comparing passwords. Input:", password, "DB:", dataRow.password);
+    
+    if (dataRow.password !== password) {
+        console.log("Password mismatch for user:", username);
+        return { user: null, error: "Username atau password salah." };
+    }
+    
     console.log("Login successful for:", dataRow.username);
     const user: User = {
         id: dataRow.username,
