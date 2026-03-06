@@ -378,10 +378,10 @@ function App() {
                              </div>
                         </div>
                         <h1 className="text-7xl font-black tracking-tighter mb-4 leading-none drop-shadow-2xl">
-                            MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-white">DIGTA</span>
+                            ES <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-white">ENTAL</span>
                         </h1>
-                        <p className="text-indigo-200 text-sm font-normal tracking-wide mt-2 inline-block whitespace-nowrap">
-                            Management Assessment Based Digital
+                        <p className="text-indigo-200 text-sm font-normal tracking-wide mt-2 inline-block">
+                            E-Student Evaluation Network for Testing, Analytics, and Learning
                         </p>
                         <p className="text-indigo-100/80 text-sm mt-6 font-light leading-relaxed max-w-md">Platform Assesment Berbasis Digital yang aman, transparan, dan terintegrasi untuk mengukur perkembangan kemampuan akademik secara akurat.</p>
                     </div>
@@ -415,10 +415,10 @@ function App() {
                             </div>
 
                             <h2 className="text-3xl font-black text-slate-800 tracking-tighter leading-none mb-1 lg:hidden text-center">
-                                MAS <span className="text-indigo-600">DIGTA</span>
+                                ES <span className="text-indigo-600">ENTAL</span>
                             </h2>
-                            <p className="text-xs font-normal text-slate-400 whitespace-nowrap mb-8 lg:hidden text-center">
-                                Management Assessment Based Digital
+                            <p className="text-xs font-normal text-slate-400 mb-8 lg:hidden text-center">
+                                E-Student Evaluation Network for Testing, Analytics, and Learning
                             </p>
                             
                             <h3 className="text-2xl font-bold text-slate-800 mb-2">Selamat Datang</h3>

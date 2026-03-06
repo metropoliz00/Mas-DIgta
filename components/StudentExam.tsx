@@ -254,10 +254,10 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
               </div>
               <div className="leading-tight hidden sm:block">
                   <h1 className="font-black text-lg md:text-xl text-slate-800 tracking-tighter">
-                      MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">DIGTA</span>
+                      ES <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">ENTAL</span>
                   </h1>
-                  <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                      Management Assessment Based Digital
+                  <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-tight max-w-[150px] md:max-w-[200px]">
+                      E-Student Evaluation Network for Testing, Analytics, and Learning
                   </p>
               </div>
           </div>

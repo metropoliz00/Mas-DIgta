@@ -75,7 +75,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, onSwitc
       };
       
       const menuName = tabNames[activeTab] || 'Admin Panel';
-      document.title = `${menuName} | MAS DIGTA`;
+      document.title = `${menuName} | ES ENTAL`;
   }, [activeTab]);
   
   const fetchData = async () => {
@@ -132,10 +132,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, onSwitc
                 </div>
                 <div className="flex flex-col overflow-hidden">
                     <h1 className="font-black text-2xl text-slate-800 tracking-tighter leading-none">
-                        MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">DIGTA</span>
+                        ES <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">ENTAL</span>
                     </h1>
-                    <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap mt-0.5 tracking-widest uppercase">
-                        Digital Assessment
+                    <span className="text-[9px] font-bold text-slate-400 mt-0.5 tracking-widest uppercase leading-tight">
+                        E-Student Evaluation Network for Testing, Analytics, and Learning
                     </span>
                 </div>
             </div>
