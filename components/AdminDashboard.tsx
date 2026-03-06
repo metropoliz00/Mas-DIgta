@@ -82,7 +82,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, onSwitc
     setIsRefreshing(true);
     try {
         const data = await api.getDashboardData();
-        setDashboardData(data);
+        const stats = await api.getDashboardStats(user.role, user.kelas_id, user.kelas);
+        
+        setDashboardData({
+            ...data,
+            counts: stats.counts,
+            classStats: stats.classStats
+        });
+        
         const config = await api.getAppConfig();
         setAppConfig(config);
     } catch (e) { console.error(e); } finally { setLoading(false); setIsRefreshing(false); }

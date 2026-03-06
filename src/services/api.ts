@@ -233,6 +233,52 @@ export const api = {
       }));
   },
 
+  getUsersPaginated: async (params: { 
+    page: number, 
+    pageSize: number, 
+    searchTerm?: string, 
+    role?: string, 
+    school?: string, 
+    kelas?: string 
+  }): Promise<{ users: any[], totalCount: number }> => {
+    const { page, pageSize, searchTerm, role, school, kelas } = params;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from('users')
+      .select('*', { count: 'exact' });
+
+    if (role && role !== 'all') {
+      query = query.eq('role', role);
+    }
+    if (school && school !== 'all') {
+      query = query.eq('school', school);
+    }
+    if (kelas && kelas !== 'all') {
+      query = query.eq('kelas', kelas);
+    }
+    if (searchTerm) {
+      query = query.or(`username.ilike.%${searchTerm}%,fullname.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error, count } = await query
+      .order('fullname', { ascending: true })
+      .range(from, to);
+
+    if (error || !data) return { users: [], totalCount: 0 };
+
+    const mappedUsers = data.map((u: any) => ({
+        ...u,
+        kelas_id: u.school,
+        photo_url: formatGoogleDriveUrl(u.photo_url),
+        active_tp: u.active_tp || '',
+        exam_type: u.exam_type || ''
+    }));
+
+    return { users: mappedUsers, totalCount: count || 0 };
+  },
+
   saveUser: async (userData: any): Promise<{success: boolean, message: string}> => {
       const { error } = await supabase.from('users').upsert(userData);
       return { success: !error, message: error?.message || 'Success' };
@@ -348,8 +394,75 @@ export const api = {
       return { success: !ansError };
   },
   
+  getUniqueFilters: async () => {
+    const { data: schools } = await supabase.from('users').select('school').not('school', 'is', null).order('school');
+    const { data: classes } = await supabase.from('users').select('kelas').not('kelas', 'is', null).order('kelas');
+    
+    const uniqueSchools = Array.from(new Set(schools?.map(s => s.school).filter(Boolean))).sort();
+    const uniqueClasses = Array.from(new Set(classes?.map(c => c.kelas).filter(Boolean))).sort();
+    
+    return { uniqueSchools, uniqueClasses };
+  },
+
+  getDashboardStats: async (role: string, school?: string, kelas?: string) => {
+    // 1. Get total counts by status
+    let statusQuery = supabase.from('users').select('status', { count: 'exact' });
+    if (role === 'Guru' && school) {
+      statusQuery = statusQuery.eq('school', school);
+      if (kelas && kelas !== '-') {
+        statusQuery = statusQuery.eq('kelas', kelas);
+      }
+    }
+    
+    const { data: statusData, error: sErr } = await statusQuery;
+    
+    const counts = { OFFLINE: 0, LOGGED_IN: 0, WORKING: 0, FINISHED: 0 };
+    if (statusData) {
+      statusData.forEach((u: any) => {
+        const s = (u.status || 'OFFLINE') as keyof typeof counts;
+        if (counts[s] !== undefined) counts[s]++;
+      });
+    }
+
+    // 2. Get counts by school and class (for Admin Pusat)
+    let classStats: any[] = [];
+    if (role === 'admin') {
+      const { data: allUsers, error: aErr } = await supabase
+        .from('users')
+        .select('school, kelas, status, kecamatan')
+        .eq('role', 'siswa');
+      
+      if (allUsers) {
+        const groupMap: Record<string, any> = {};
+        allUsers.forEach((u: any) => {
+          const schoolName = u.school || 'Tanpa Sekolah';
+          const className = u.kelas || '-';
+          const groupKey = `${schoolName}_${className}`;
+          
+          if (!groupMap[groupKey]) {
+            groupMap[groupKey] = { 
+              name: schoolName, level: className, kecamatan: u.kecamatan || '-',
+              total: 0, offline: 0, login: 0, working: 0, finished: 0 
+            };
+          }
+          
+          groupMap[groupKey].total++;
+          const s = u.status || 'OFFLINE';
+          if (s === 'OFFLINE') groupMap[groupKey].offline++;
+          else if (s === 'LOGGED_IN') groupMap[groupKey].login++;
+          else if (s === 'WORKING') groupMap[groupKey].working++;
+          else if (s === 'FINISHED') groupMap[groupKey].finished++;
+        });
+        classStats = Object.values(groupMap);
+      }
+    }
+
+    return { counts, classStats };
+  },
+
   getDashboardData: async () => {
-      const { data: users, error: uErr } = await supabase.from('users').select('*');
+      // Optimized: Only fetch counts for users instead of full list
+      const { count: userCount, error: uErr } = await supabase.from('users').select('*', { count: 'exact', head: true });
       const { data: exams, error: eErr } = await supabase.from('exams').select('*');
       const { data: schedules, error: sErr } = await supabase.from('school_schedules').select('*');
       const { data: configData, error: cErr } = await supabase.from('app_config').select('key, value');
@@ -357,7 +470,8 @@ export const api = {
       const config = configData ? configData.reduce((acc: any, curr: any) => { acc[curr.key] = curr.value; return acc; }, {}) : {};
 
       return { 
-          allUsers: users || [], 
+          allUsers: [], // Empty list to prevent performance issues
+          totalUsers: userCount || 0,
           allExams: exams || [],
           schedules: schedules || [],
           token: config['TOKEN'] || 'TOKEN',

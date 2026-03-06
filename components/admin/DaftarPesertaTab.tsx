@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../../context/ToastContext';
-import { Users, FileText, Download, Upload, Loader2, Plus, Search, Edit, Trash2, X, Camera, Save, User as UserIcon, Check, Wand2, UserCog, Database, LogIn, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
+import { Users, FileText, Download, Upload, Loader2, Plus, Search, Edit, Trash2, X, Camera, Save, User as UserIcon, Check, Wand2, UserCog, Database, LogIn, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User } from '../../types';
 import * as XLSX from 'xlsx';
@@ -23,6 +23,14 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKelas, setFilterKelas] = useState('all');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
+    const [totalCount, setTotalCount] = useState(0);
+    const [availableSchools, setAvailableSchools] = useState<string[]>([]);
+    const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+    
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -33,24 +41,50 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
         school: string; kelas: string; kecamatan: string; gender: string; photo?: string; photo_url?: string 
     }>({ id: '', username: '', password: '', fullname: '', role: 'siswa', school: '', kelas: '', kecamatan: '', gender: 'L', photo: '', photo_url: '' });
     
-    // Reload users when mode changes
-    useEffect(() => { loadUsers(); }, [mode]);
+    // Reload users when filters or page changes
+    useEffect(() => { 
+        loadUsers(); 
+    }, [mode, currentPage, pageSize, filterRole, filterSchool, filterKelas]);
+
+    // Load unique filters once
+    useEffect(() => {
+        const fetchFilters = async () => {
+            const { uniqueSchools, uniqueClasses } = await api.getUniqueFilters();
+            setAvailableSchools(uniqueSchools);
+            setAvailableClasses(uniqueClasses);
+        };
+        fetchFilters();
+    }, []);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterRole, filterSchool, filterKelas]);
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadUsers();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
     
     const loadUsers = async () => { 
         setLoading(true); 
         try { 
-            const data = await api.getUsers(); 
-            // Filter by mode immediately upon load
-            const filteredData = data.filter(u => mode === 'siswa' ? u.role === 'siswa' : (u.role === 'admin' || u.role === 'Guru'));
+            const roleFilter = mode === 'siswa' ? 'siswa' : filterRole;
             
-            // Map data securely. API returns 'fullname', 'school', 'gender' directly from DB.
-            const mappedData = filteredData.map(u => ({
-                ...u,
-                school: u.school || u.kelas_id || '', 
-                fullname: u.fullname || u.nama_lengkap || '', 
-                gender: u.gender || u.jenis_kelamin || 'L'
-            }));
-            setUsers(mappedData); 
+            const { users: data, totalCount: count } = await api.getUsersPaginated({
+                page: currentPage,
+                pageSize: pageSize,
+                searchTerm: searchTerm,
+                role: roleFilter,
+                school: filterSchool,
+                kelas: filterKelas
+            });
+
+            setUsers(data); 
+            setTotalCount(count);
         } catch(e) { console.error(e); } 
         finally { setLoading(false); } 
     };
@@ -162,32 +196,14 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
         } 
     };
     
-    const uniqueSchools = useMemo<string[]>(() => { const schools = new Set(users.map(u => u.school).filter(Boolean)); return Array.from(schools).sort() as string[]; }, [users]);
-    const uniqueClasses = useMemo<string[]>(() => { const classes = new Set(users.map(u => u.kelas).filter(Boolean)); return Array.from(classes).sort() as string[]; }, [users]);
+    const uniqueSchools = useMemo<string[]>(() => availableSchools, [availableSchools]);
+    const uniqueClasses = useMemo<string[]>(() => availableClasses, [availableClasses]);
     
     const filteredUsers = useMemo(() => { 
-        let res = users; 
-        if (filterRole !== 'all') res = res.filter(u => u.role === filterRole); 
-        if (filterSchool !== 'all') res = res.filter(u => u.school === filterSchool); 
-        if (filterKelas !== 'all') res = res.filter(u => u.kelas === filterKelas);
-        if (searchTerm) { 
-            const lower = searchTerm.toLowerCase(); 
-            res = res.filter(u => 
-                (u.username || '').toLowerCase().includes(lower) || 
-                (u.fullname || '').toLowerCase().includes(lower) || 
-                (u.school && u.school.toLowerCase().includes(lower)) || 
-                (u.id && u.id.toLowerCase().includes(lower))
-            ); 
-        } 
-        if (currentUser.role === 'Guru') res = res.filter(u => u.role === 'siswa' && (u.school || '').toLowerCase() === (currentUser.kelas_id || '').toLowerCase()); 
-        
-        // Sort by Name
-        return res.sort((a, b) => {
-            const nameA = (a.fullname || a.username || '').toLowerCase();
-            const nameB = (b.fullname || b.username || '').toLowerCase();
-            return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        });
-    }, [users, filterRole, filterSchool, filterKelas, searchTerm, currentUser, sortOrder]);
+        // Sorting is now handled by server for 'fullname'
+        // If we need custom sorting, we should pass it to the API
+        return users;
+    }, [users]);
     
     // ... (Export logic unchanged) ...
     const handleExport = () => { 
@@ -314,7 +330,7 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-100 pb-6">
                  <div>
                      <h3 className="font-black text-2xl text-slate-800 flex items-center gap-2">{icon} {title}</h3>
-                     <p className="text-slate-400 text-sm font-medium mt-1">Total {filteredUsers.length} data.</p>
+                     <p className="text-slate-400 text-sm font-medium mt-1">Total {totalCount} data.</p>
                  </div>
                  <div className="flex flex-wrap gap-3">
                     <button onClick={handleExport} className="bg-white text-emerald-600 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-50 transition border-2 border-emerald-100 shadow-sm active:scale-95"><FileText size={16}/> Export</button>
@@ -408,6 +424,57 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
                          </tr>)))}
                      </tbody>
                  </table>
+             </div>
+
+             {/* Pagination Controls */}
+             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100">
+                <div className="text-xs font-bold text-slate-400">
+                    Menampilkan <span className="text-slate-700">{Math.min(users.length, pageSize)}</span> dari <span className="text-slate-700">{totalCount}</span> data
+                </div>
+                <div className="flex items-center gap-2">
+                    <button 
+                        disabled={currentPage === 1 || loading}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className="p-2 rounded-xl border-2 border-slate-100 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                        {[...Array(Math.min(5, Math.ceil(totalCount / pageSize)))].map((_, i) => {
+                            const pageNum = i + 1;
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => setCurrentPage(pageNum)}
+                                    className={`w-10 h-10 rounded-xl text-xs font-bold transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'hover:bg-slate-50 text-slate-500'}`}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
+                        {Math.ceil(totalCount / pageSize) > 5 && <span className="px-2 text-slate-400">...</span>}
+                    </div>
+
+                    <button 
+                        disabled={currentPage >= Math.ceil(totalCount / pageSize) || loading}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                        className="p-2 rounded-xl border-2 border-slate-100 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                        <ChevronRight size={18} />
+                    </button>
+
+                    <select 
+                        value={pageSize} 
+                        onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                        className="ml-2 p-2 border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-500 outline-none focus:border-indigo-500 bg-white cursor-pointer"
+                    >
+                        <option value={10}>10 / hal</option>
+                        <option value={25}>25 / hal</option>
+                        <option value={50}>50 / hal</option>
+                        <option value={100}>100 / hal</option>
+                    </select>
+                </div>
              </div>
 
              {isModalOpen && (

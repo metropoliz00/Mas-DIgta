@@ -20,116 +20,55 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
     // Create a User Lookup Map for Real-time Data in Feed
     const userLookup = useMemo(() => {
         const map: Record<string, any> = {};
-        if (dashboardData.allUsers) {
-            dashboardData.allUsers.forEach((u: any) => {
-                map[u.username] = u;
-            });
-        }
+        // Note: allUsers is now empty in optimized dashboardData
         return map;
-    }, [dashboardData.allUsers]);
+    }, []);
 
     // FILTER ONLY STUDENTS FOR MAIN STATS
     const studentUsers = useMemo(() => {
-        return (dashboardData.allUsers || []).filter((u: any) => u.role === 'siswa');
-    }, [dashboardData.allUsers]);
+        return []; // No longer using full user list here
+    }, []);
 
     // FILTER ADMIN/GURU FOR INFO
-    const staffUsers = useMemo(() => {
-        return (dashboardData.allUsers || []).filter((u: any) => u.role !== 'siswa');
-    }, [dashboardData.allUsers]);
+    const staffUsersCount = dashboardData.totalUsers - (dashboardData.totalStudents || 0); // Approximate
 
     const stats = useMemo(() => {
-        let counts = { OFFLINE: 0, LOGGED_IN: 0, WORKING: 0, FINISHED: 0 };
-        let total = studentUsers.length;
+        return { 
+            counts: dashboardData.counts || { OFFLINE: 0, LOGGED_IN: 0, WORKING: 0, FINISHED: 0 }, 
+            total: dashboardData.totalUsers || 0 
+        };
+    }, [dashboardData.counts, dashboardData.totalUsers]);
 
-        if (currentUserState.role === 'Guru') {
-            const mySchool = (currentUserState.kelas_id || '').toLowerCase();
-            const schoolStudents = studentUsers.filter((u: any) => {
-                const matchSchool = (u.school || '').toLowerCase() === mySchool;
-                // Strict Class Filter if Guru has class assigned (Use u.kelas direct from DB)
-                const matchClass = !currentUserState.kelas || currentUserState.kelas === '-' || currentUserState.kelas === '' ? true : u.kelas === currentUserState.kelas;
-                return matchSchool && matchClass;
-            });
-            
-            const localCounts = { OFFLINE: 0, LOGGED_IN: 0, WORKING: 0, FINISHED: 0 };
-            schoolStudents.forEach((u: any) => {
-                const status = (u.status || 'OFFLINE') as keyof typeof localCounts;
-                if (localCounts[status] !== undefined) {
-                    localCounts[status]++;
-                }
-            });
-
-            counts = localCounts;
-            total = schoolStudents.length;
-        } else {
-            // Admin Pusat sees all students stats
-            studentUsers.forEach((u: any) => {
-                const status = (u.status || 'OFFLINE') as keyof typeof counts;
-                if (counts[status] !== undefined) {
-                    counts[status]++;
-                }
-            });
-        }
-
-        return { counts, total };
-    }, [studentUsers, currentUserState]);
-
-    // Extract Unique Kecamatans for Filter (From Students)
+    // Extract Unique Kecamatans for Filter (From classStats)
     const uniqueKecamatans = useMemo(() => {
-        if (!studentUsers) return [];
-        const kecs = new Set(studentUsers.map((u: any) => u.kecamatan).filter((k: any) => k && k !== '-'));
+        if (!dashboardData.classStats) return [];
+        const kecs = new Set(dashboardData.classStats.map((u: any) => u.kecamatan).filter((k: any) => k && k !== '-'));
         return Array.from(kecs).sort();
-    }, [studentUsers]);
+    }, [dashboardData.classStats]);
 
     // Extract Unique Schools for Filter
     const uniqueSchoolList = useMemo(() => {
-        if (!studentUsers) return [];
-        const schools = new Set(studentUsers.map((u: any) => u.school).filter((s: any) => s && s !== '-' && s.trim() !== ''));
+        if (!dashboardData.classStats) return [];
+        const schools = new Set(dashboardData.classStats.map((u: any) => u.name).filter((s: any) => s && s !== '-' && s.trim() !== ''));
         return Array.from(schools).sort();
-    }, [studentUsers]);
+    }, [dashboardData.classStats]);
 
     // Extract Unique Classes (Levels) - FROM DB KELAS
     const uniqueClasses = useMemo(() => {
-        if (!studentUsers) return [];
+        if (!dashboardData.classStats) return [];
         const levels = new Set<string>();
-        studentUsers.forEach((u: any) => {
-            const level = u.kelas;
+        dashboardData.classStats.forEach((u: any) => {
+            const level = u.level;
             if (level && level !== '-') levels.add(level);
         });
         return Array.from(levels).sort((a, b) => parseInt(a) - parseInt(b));
-    }, [studentUsers]);
+    }, [dashboardData.classStats]);
 
     // Calculate Stats Per Class/School for Admin Pusat (Only Students)
     const classStats = useMemo(() => {
-        if (currentUserState.role !== 'admin' || !studentUsers) return [];
+        if (currentUserState.role !== 'admin' || !dashboardData.classStats) return [];
 
-        // Key by School+Class to differentiate classes within same school
-        const groupMap: Record<string, { name: string, level: string, kecamatan: string, total: number, offline: number, login: number, working: number, finished: number }> = {};
-
-        studentUsers.forEach((u: any) => {
-            const schoolName = u.school || 'Tanpa Sekolah';
-            const className = u.kelas || '-';
-            const groupKey = `${schoolName}_${className}`; // Unique key
-            
-            if (!groupMap[groupKey]) {
-                groupMap[groupKey] = { 
-                    name: schoolName,
-                    level: className,
-                    kecamatan: u.kecamatan || '-',
-                    total: 0, offline: 0, login: 0, working: 0, finished: 0 
-                };
-            }
-            
-            groupMap[groupKey].total++;
-            
-            const status = u.status || 'OFFLINE';
-            if (status === 'OFFLINE') groupMap[groupKey].offline++;
-            else if (status === 'LOGGED_IN') groupMap[groupKey].login++;
-            else if (status === 'WORKING') groupMap[groupKey].working++;
-            else if (status === 'FINISHED') groupMap[groupKey].finished++;
-        });
-
-        let results = Object.values(groupMap).sort((a, b) => b.total - a.total);
+        let results = [...dashboardData.classStats].sort((a, b) => b.total - a.total);
 
         // Apply Filters
         if (kecamatanFilter !== 'all') {
@@ -150,7 +89,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
         }
 
         return results;
-    }, [studentUsers, currentUserState.role, schoolSearch, kecamatanFilter, schoolFilter, classFilter]);
+    }, [dashboardData.classStats, currentUserState.role, schoolSearch, kecamatanFilter, schoolFilter, classFilter]);
 
     const { OFFLINE, LOGGED_IN, WORKING, FINISHED } = stats.counts;
     const displayTotalStudents = stats.total;
@@ -308,7 +247,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                 </div>
                 <div className="text-right relative z-10">
                     <div className="flex items-baseline gap-1 justify-end">
-                        <span className="text-4xl font-black text-slate-800">{staffUsers.length}</span>
+                        <span className="text-4xl font-black text-slate-800">{dashboardData.totalUsers - (dashboardData.counts?.OFFLINE + dashboardData.counts?.LOGGED_IN + dashboardData.counts?.WORKING + dashboardData.counts?.FINISHED || 0)}</span>
                         <span className="text-sm font-bold text-slate-400">User</span>
                     </div>
                     <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] uppercase font-bold tracking-wider rounded-full border border-indigo-100 mt-1">
@@ -485,7 +424,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ dashboardData, currentUserSta
                                     const val = e.target.value;
                                     setSchoolFilter(val);
                                     if (val !== 'all') {
-                                        const found = studentUsers.find((s:any) => s.school === val);
+                                        const found = dashboardData.classStats?.find((s:any) => s.name === val);
                                         if (found && found.kecamatan) setKecamatanFilter(found.kecamatan);
                                     }
                                 }}
