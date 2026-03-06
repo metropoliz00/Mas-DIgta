@@ -299,7 +299,18 @@ function App() {
         
         if (isTimeout) {
             alert("Waktu Ujian Habis. Jawaban tersimpan otomatis.");
-            handleLogout();
+            // Reset state and redirect to login
+            localStorage.removeItem('cbt_user');
+            localStorage.removeItem('cbt_admin_tab'); 
+            sessionStorage.removeItem('cbt_user');
+            setCurrentUser(null);
+            setLoginForm({ username: '', password: '', rememberMe: false });
+            setInputToken('');
+            setErrorMsg('');
+            setQuestions([]);
+            setShowPassword(false);
+            setShowConfirmModal(false);
+            setView('login');
         } else {
             setView('result');
         }
