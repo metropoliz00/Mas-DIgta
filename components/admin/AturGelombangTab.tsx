@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, Save, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { SchoolSchedule } from '../../types';
 
 const AturGelombangTab = ({ students }: { students: any[] }) => {

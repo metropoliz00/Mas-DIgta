@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Key, RefreshCw, Save, X, Edit, Clock, Layers, ShieldCheck, Copy, Award } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { User } from '../../types';
 
 const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surveyDuration, refreshData, isRefreshing }: { currentUser: User, token: string, duration: number, maxQuestions: number, kktp: number, surveyDuration: number, refreshData: () => void, isRefreshing: boolean }) => {

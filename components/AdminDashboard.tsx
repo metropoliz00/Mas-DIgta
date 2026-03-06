@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Home, LogOut, Menu, Monitor, Group, Clock, Printer, List, Calendar, Key, FileQuestion, LayoutDashboard, BarChart3, Award, RefreshCw, X, CreditCard, Bell, CheckCircle2, ChevronRight, ChevronLeft, Loader2, Search, Target, UserCog, ClipboardList, User as UserIcon, ChevronDown, ChevronUp, Settings } from 'lucide-react';
-import { api } from '../services/api';
+import { api } from '../src/services/api';
 import { User } from '../types';
 import OverviewTab from './admin/OverviewTab';
 import AturGelombangTab from './admin/AturGelombangTab';

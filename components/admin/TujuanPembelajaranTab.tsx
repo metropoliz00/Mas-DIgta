@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Target, Plus, Download, Upload, Search, Edit, Trash2, Loader2, X, Save, FileText, BookOpen, Wand2 } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
 import { exportToExcel, SUBJECTS_DB } from '../../utils/adminHelpers';

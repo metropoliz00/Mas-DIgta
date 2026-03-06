@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Save, Loader2, Building, UserSquare, Calendar, Shield, School, UserCircle, Briefcase, Lock, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { User } from '../../types';
 
 const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {

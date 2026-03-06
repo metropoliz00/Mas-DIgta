@@ -4,7 +4,7 @@ import { User, Exam, QuestionWithOptions } from './types';
 import { Key, User as UserIcon, AlertCircle, LogOut, Check, Eye, EyeOff, Loader2, Clock, ShieldCheck, PlayCircle, GraduationCap, LogIn, ChevronRight, BookOpen, Fingerprint } from 'lucide-react';
 import StudentExam from './components/StudentExam';
 import AdminDashboard from './components/AdminDashboard';
-import { api } from './services/api';
+import { api } from './src/services/api';
 
 type ViewState = 'login' | 'confirm' | 'exam' | 'result' | 'admin';
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Award, FileText, Loader2, BookOpen, Filter } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { exportToExcel, getPredicateBadge } from '../../utils/adminHelpers';
 
 const RankingTab = ({ students }: { students: any[] }) => {

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Group, Search, Save, Loader2, Filter, Target, ListChecks, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { User, Exam, LearningObjective } from '../../types';
 
 const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: User, students: any[], refreshData: () => void }) => {

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Clock, Search, Save, Loader2, Filter, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { User } from '../../types';
 
 const AturSesiTab = ({ currentUser, students, refreshData, isLoading }: { currentUser: User, students: any[], refreshData: () => void, isLoading: boolean }) => {

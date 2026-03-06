@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Users, FileText, Download, Upload, Loader2, Plus, Search, Edit, Trash2, X, Camera, Save, User as UserIcon, Check, Wand2, UserCog, Database, LogIn, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { User } from '../../types';
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '../../utils/adminHelpers';

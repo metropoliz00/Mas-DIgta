@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { FileQuestion, Download, Upload, Loader2, Plus, Edit, Trash2, X, Save, Image as ImageIcon, CheckCircle2, ChevronDown, ChevronUp, Target, Layout, Type } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { QuestionRow, LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
 import { SUBJECTS_DB } from '../../utils/adminHelpers';

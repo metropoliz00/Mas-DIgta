@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { exportToExcel, formatDurationToText, SUBJECTS_DB } from '../../utils/adminHelpers';
 import { User, ExternalGrade } from '../../types';
 import * as XLSX from 'xlsx';

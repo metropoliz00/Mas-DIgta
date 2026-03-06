@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Printer, RefreshCw, ChevronDown, ChevronUp, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { User } from '../../types';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 
 const CetakKartuTab = ({ currentUser, students, schedules }: { currentUser: User, students: any[], schedules: any[] }) => {
     const [filterSchool, setFilterSchool] = useState('all');

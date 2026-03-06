@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Printer, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { User, Exam } from '../../types';
 
 const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, students: any[] }) => {

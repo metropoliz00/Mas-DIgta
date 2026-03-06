@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart3, FileText, Loader2, Filter, AlertCircle, Printer, Settings, Target, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
-import { api } from '../../services/api';
+import { api } from '../../src/services/api';
 import { Exam, User, LearningObjective } from '../../types';
 
 const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: any[] }) => {

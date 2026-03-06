@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, Check, ChevronLeft, ChevronRight, LayoutGrid, Flag, Monitor, LogOut, Loader2, AlertTriangle, X, ShieldAlert, RotateCcw, ZoomIn, ZoomOut, Maximize, Move, HelpCircle, User } from 'lucide-react';
 import { QuestionWithOptions, UserAnswerValue, Exam } from '../types';
-import { api } from '../services/api';
+import { api } from '../src/services/api';
 
 interface StudentExamProps {
   exam: Exam;
