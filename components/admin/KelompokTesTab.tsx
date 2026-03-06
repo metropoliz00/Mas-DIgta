@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Group, Search, Save, Loader2, Filter, Target, ListChecks, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User, Exam, LearningObjective } from '../../types';
+import { getSubjects, getExamTypes, getExamSubjectMapping } from '../../utils/adminHelpers';
 
 const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: User, students: any[], refreshData: () => void }) => {
     const [exams, setExams] = useState<Exam[]>([]);
@@ -13,8 +14,10 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
     const [selectedTp, setSelectedTp] = useState('');
     
     // Logic Exam Type
-    const [selectedExamType, setSelectedExamType] = useState('Sumatif 1');
-    const examTypes = ['Sumatif 1', 'Sumatif 2', 'Sumatif 3', 'Sumatif 4', 'Sumatif Akhir Semester'];
+    const [examTypes, setExamTypes] = useState<{id: string, label: string}[]>([]);
+    const [selectedExamType, setSelectedExamType] = useState('');
+    const [examSubjectMapping, setExamSubjectMapping] = useState<{examTypeId: string, subjectIds: string[]}[]>([]);
+    const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
     
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
@@ -27,12 +30,28 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
-        api.getExams().then(setExams);
-        setLoadingTps(true);
-        api.getLearningObjectives().then(res => {
-            setTps(res);
-            setLoadingTps(false);
-        });
+        const loadInitial = async () => {
+            const [examData, tpData, config] = await Promise.all([
+                api.getExams(),
+                api.getLearningObjectives(),
+                api.getAppConfig()
+            ]);
+            setExams(examData);
+            setTps(tpData);
+            
+            const types = getExamTypes(config);
+            const mapping = getExamSubjectMapping(config);
+            const subjects = getSubjects(config);
+            
+            setExamTypes(types);
+            setExamSubjectMapping(mapping);
+            setSubjectsDb(subjects);
+            
+            if (types.length > 0) {
+                setSelectedExamType(types[0].id);
+            }
+        };
+        loadInitial();
     }, []);
 
     // STRICTLY FILTER FOR STUDENTS ONLY
@@ -57,12 +76,19 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
         );
     }, [studentList]);
 
-    // FILTER TP BASED ON SELECTED EXAM (MAPEL)
-    const filteredTps = useMemo(() => {
-        if (!selectedExam) return [];
-        // Match TP mapel with active exam name
-        return tps.filter(t => t.mapel === selectedExam);
-    }, [tps, selectedExam]);
+    const filteredExams = useMemo(() => {
+        const mapping = examSubjectMapping.find(m => m.examTypeId === selectedExamType);
+        if (!mapping || mapping.subjectIds.length === 0) return exams;
+        
+        const allowedSubjectLabels = subjectsDb
+            .filter(s => mapping.subjectIds.includes(s.id))
+            .map(s => s.label.toLowerCase());
+            
+        return exams.filter(e => {
+            const examName = e.nama_ujian.toLowerCase();
+            return allowedSubjectLabels.some(label => examName.includes(label));
+        });
+    }, [exams, selectedExamType, examSubjectMapping, subjectsDb]);
 
     // Reset selected TP when exam changes
     useEffect(() => {
@@ -132,7 +158,7 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
                          <div className="relative">
                              <ListChecks className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                              <select className="w-full pl-8 p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 font-bold text-indigo-700" value={selectedExamType} onChange={e => setSelectedExamType(e.target.value)}>
-                                {examTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                {examTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                             </select>
                          </div>
                     </div>
@@ -142,7 +168,7 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Pilih Ujian (Mapel)</label>
                          <select className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 font-bold text-indigo-700" value={selectedExam} onChange={e => setSelectedExam(e.target.value)}>
                             <option value="">-- Pilih Ujian --</option>
-                            {exams.map(e => <option key={e.id} value={e.id}>{e.nama_ujian}</option>)}
+                            {filteredExams.map(e => <option key={e.id} value={e.id}>{e.nama_ujian}</option>)}
                         </select>
                     </div>
 

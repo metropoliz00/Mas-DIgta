@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Building, UserSquare, Calendar, Shield, School, UserCircle, Briefcase, Lock, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Save, Loader2, Building, UserSquare, Calendar, Shield, School, UserCircle, Briefcase, Lock, Upload, Image as ImageIcon, AlertCircle, Plus, Trash2, ListChecks, BookOpen } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User } from '../../types';
+import { getSubjects, getExamTypes, getExamSubjectMapping } from '../../utils/adminHelpers';
 
 const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
     const [loading, setLoading] = useState(false);
@@ -19,8 +20,16 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
         semester: '',   
         academicYear: '',
         logoKabupaten: '', 
-        logoSekolah: ''
+        logoSekolah: '',
+        examTypes: [] as { id: string, label: string }[],
+        examSignatories: {} as Record<string, { leftTitle: string, leftName: string, leftNip: string, rightTitle: string, rightName: string, rightNip: string }>,
+        examSubjectMapping: [] as { examTypeId: string, subjectIds: string[] }[],
+        subjectsDb: [] as { id: string, label: string }[]
     });
+
+    const [newExamType, setNewExamType] = useState({ id: '', label: '' });
+    const [newSubjectId, setNewSubjectId] = useState('');
+    const [newSubjectLabel, setNewSubjectLabel] = useState('');
 
     const isGuru = currentUser.role === 'Guru';
     // Logic: If user has specific class assigned in DB, lock it.
@@ -45,6 +54,15 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                 // Auto-generate default position, but allow override from config
                 const defaultPosition = currentUser.kelas && currentUser.kelas !== '-' ? `Guru Kelas ${currentUser.kelas}` : 'Guru Kelas';
 
+                let parsedSignatories = {};
+                if (globalConfig['EXAM_SIGNATORIES']) {
+                    try {
+                        parsedSignatories = JSON.parse(globalConfig['EXAM_SIGNATORIES']);
+                    } catch (e) {
+                        console.error("Failed to parse EXAM_SIGNATORIES", e);
+                    }
+                }
+
                 setFormData({
                     schoolName: mergedConfig['SCHOOL_NAME'] || '',
                     principalName: mergedConfig['PRINCIPAL_NAME'] || '',
@@ -62,7 +80,11 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                     academicYear: mergedConfig['ACADEMIC_YEAR'] || '2025/2026',
                     
                     logoKabupaten: globalConfig['LOGO_KABUPATEN'] || '',
-                    logoSekolah: globalConfig['LOGO_SEKOLAH'] || ''
+                    logoSekolah: globalConfig['LOGO_SEKOLAH'] || '',
+                    examTypes: getExamTypes(globalConfig),
+                    examSignatories: parsedSignatories,
+                    examSubjectMapping: getExamSubjectMapping(globalConfig),
+                    subjectsDb: getSubjects(globalConfig)
                 });
             } catch(e) {
                 console.error("Failed to load config", e);
@@ -120,7 +142,11 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                     'SCHOOL_NAME': formData.schoolName,
                     'LOGO_KABUPATEN': formData.logoKabupaten,
                     'LOGO_SEKOLAH': formData.logoSekolah,
-                    'ACADEMIC_YEAR': formData.academicYear
+                    'ACADEMIC_YEAR': formData.academicYear,
+                    'EXAM_TYPES': JSON.stringify(formData.examTypes),
+                    'EXAM_SIGNATORIES': JSON.stringify(formData.examSignatories),
+                    'EXAM_SUBJECTS': JSON.stringify(formData.examSubjects),
+                    'SUBJECTS_DB': JSON.stringify(formData.subjectsDb)
                 };
                 await api.saveBatchConfig(globalPayload);
             }
@@ -301,6 +327,203 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Section 1.5: Jenis Ujian */}
+                {!isGuru && (
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 relative overflow-hidden">
+                        <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <ListChecks size={18} className="text-indigo-500"/> Jenis Ujian (Kategori)
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none transition-all bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10" 
+                                    placeholder="Tambah Jenis Ujian Baru (Misal: OSN, TKA)"
+                                    value={newExamType}
+                                    onChange={e => setNewExamType(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (newExamType.trim() && !formData.examTypes.includes(newExamType.trim())) {
+                                                setFormData(prev => ({...prev, examTypes: [...prev.examTypes, newExamType.trim()]}));
+                                                setNewExamType('');
+                                            }
+                                        }
+                                    }}
+                                />
+                                <button 
+                                    onClick={() => {
+                                        if (newExamType.trim() && !formData.examTypes.includes(newExamType.trim())) {
+                                            setFormData(prev => ({...prev, examTypes: [...prev.examTypes, newExamType.trim()]}));
+                                            setNewExamType('');
+                                        }
+                                    }}
+                                    className="bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2"
+                                >
+                                    <Plus size={18}/> Tambah
+                                </button>
+                            </div>
+                            
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                <ul className="divide-y divide-slate-100">
+                                    {formData.examTypes.map((type, idx) => (
+                                        <li key={idx} className="flex flex-col p-4 hover:bg-slate-50 transition">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="font-bold text-slate-700">{type}</span>
+                                                <button 
+                                                    onClick={() => {
+                                                        setFormData(prev => {
+                                                            const newSignatories = { ...prev.examSignatories };
+                                                            delete newSignatories[type];
+                                                            const newExamSubjects = { ...prev.examSubjects };
+                                                            delete newExamSubjects[type];
+                                                            return {
+                                                                ...prev, 
+                                                                examTypes: prev.examTypes.filter(t => t !== type),
+                                                                examSignatories: newSignatories,
+                                                                examSubjects: newExamSubjects
+                                                            };
+                                                        });
+                                                    }}
+                                                    className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 rounded-lg transition"
+                                                >
+                                                    <Trash2 size={18}/>
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 bg-white p-4 rounded-xl border border-slate-200">
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-500 mb-2">Tanda Tangan Kiri</p>
+                                                    <input type="text" placeholder="Jabatan (cth: Kepala Sekolah)" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.leftTitle || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), leftTitle: e.target.value}}}))} />
+                                                    <input type="text" placeholder="Nama Lengkap" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.leftName || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), leftName: e.target.value}}}))} />
+                                                    <input type="text" placeholder="NIP" className="w-full text-xs p-2 border border-slate-200 rounded" value={formData.examSignatories[type]?.leftNip || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), leftNip: e.target.value}}}))} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-500 mb-2">Tanda Tangan Kanan</p>
+                                                    <input type="text" placeholder="Jabatan (cth: Guru Kelas)" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.rightTitle || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), rightTitle: e.target.value}}}))} />
+                                                    <input type="text" placeholder="Nama Lengkap" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.rightName || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), rightName: e.target.value}}}))} />
+                                                    <input type="text" placeholder="NIP" className="w-full text-xs p-2 border border-slate-200 rounded" value={formData.examSignatories[type]?.rightNip || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), rightNip: e.target.value}}}))} />
+                                                </div>
+                                            </div>
+                                            <div className="mt-4 border-t border-slate-100 pt-4">
+                                                <p className="text-xs font-bold text-slate-500 mb-2">Mata Pelajaran untuk Ujian Ini (Kosongkan jika semua mapel berlaku)</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {formData.subjectsDb.map(subj => {
+                                                        const isSelected = formData.examSubjects[type]?.includes(subj.label);
+                                                        return (
+                                                            <button
+                                                                key={subj.id}
+                                                                onClick={() => {
+                                                                    setFormData(prev => {
+                                                                        const currentSubjects = prev.examSubjects[type] || [];
+                                                                        const newSubjects = isSelected 
+                                                                            ? currentSubjects.filter(s => s !== subj.label)
+                                                                            : [...currentSubjects, subj.label];
+                                                                        return {
+                                                                            ...prev,
+                                                                            examSubjects: {
+                                                                                ...prev.examSubjects,
+                                                                                [type]: newSubjects
+                                                                            }
+                                                                        };
+                                                                    });
+                                                                }}
+                                                                className={`px-3 py-1 text-xs font-bold rounded-full border transition ${isSelected ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                                                            >
+                                                                {subj.label}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                    {formData.examTypes.length === 0 && (
+                                        <li className="p-4 text-center text-slate-400 font-medium text-sm">Belum ada jenis ujian.</li>
+                                    )}
+                                </ul>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium">Jenis ujian ini akan muncul pada pilihan saat mengatur ujian aktif dan pada kolom rekapitulasi nilai (Leger).</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Section 1.6: Mata Pelajaran */}
+                {!isGuru && (
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 relative overflow-hidden">
+                        <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                            <BookOpen size={18} className="text-emerald-500"/> Mata Pelajaran
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    className="w-1/3 px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none transition-all bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 uppercase" 
+                                    placeholder="Kode (Misal: IPA)"
+                                    value={newSubjectId}
+                                    onChange={e => setNewSubjectId(e.target.value.toUpperCase())}
+                                />
+                                <input 
+                                    type="text" 
+                                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none transition-all bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10" 
+                                    placeholder="Nama Mata Pelajaran (Misal: Ilmu Pengetahuan Alam)"
+                                    value={newSubjectLabel}
+                                    onChange={e => setNewSubjectLabel(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (newSubjectId.trim() && newSubjectLabel.trim() && !formData.subjectsDb.find(s => s.id === newSubjectId.trim())) {
+                                                setFormData(prev => ({...prev, subjectsDb: [...prev.subjectsDb, { id: newSubjectId.trim(), label: newSubjectLabel.trim() }]}));
+                                                setNewSubjectId('');
+                                                setNewSubjectLabel('');
+                                            }
+                                        }
+                                    }}
+                                />
+                                <button 
+                                    onClick={() => {
+                                        if (newSubjectId.trim() && newSubjectLabel.trim() && !formData.subjectsDb.find(s => s.id === newSubjectId.trim())) {
+                                            setFormData(prev => ({...prev, subjectsDb: [...prev.subjectsDb, { id: newSubjectId.trim(), label: newSubjectLabel.trim() }]}));
+                                            setNewSubjectId('');
+                                            setNewSubjectLabel('');
+                                        }
+                                    }}
+                                    className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center gap-2"
+                                >
+                                    <Plus size={18}/> Tambah
+                                </button>
+                            </div>
+                            
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                <ul className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                                    {formData.subjectsDb.map((subj, idx) => (
+                                        <li key={idx} className="flex justify-between items-center p-4 hover:bg-slate-50 transition">
+                                            <div>
+                                                <span className="font-bold text-slate-700">{subj.label}</span>
+                                                <span className="text-xs text-slate-400 ml-2 font-mono bg-slate-100 px-2 py-1 rounded">{subj.id}</span>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    setFormData(prev => ({
+                                                        ...prev, 
+                                                        subjectsDb: prev.subjectsDb.filter(s => s.id !== subj.id)
+                                                    }));
+                                                }}
+                                                className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 rounded-lg transition"
+                                            >
+                                                <Trash2 size={18}/>
+                                            </button>
+                                        </li>
+                                    ))}
+                                    {formData.subjectsDb.length === 0 && (
+                                        <li className="p-4 text-center text-slate-400 font-medium text-sm">Belum ada mata pelajaran.</li>
+                                    )}
+                                </ul>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium">Daftar mata pelajaran ini akan digunakan di seluruh aplikasi (Bank Soal, Hasil Ujian, Rekapitulasi).</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Section 2: Data Kepala Sekolah */}
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 relative overflow-hidden">

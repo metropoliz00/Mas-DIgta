@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
 import { api } from '../../src/services/api';
-import { exportToExcel, formatDurationToText, SUBJECTS_DB } from '../../utils/adminHelpers';
+import { exportToExcel, formatDurationToText, getSubjects } from '../../utils/adminHelpers';
 import { User, ExternalGrade } from '../../types';
 import * as XLSX from 'xlsx';
 
@@ -21,6 +21,8 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
     const [filterSubject, setFilterSubject] = useState('all');
     const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
     const [globalConfig, setGlobalConfig] = useState<Record<string, string>>({});
+    const [examTypes, setExamTypes] = useState<string[]>(['Sumatif 1', 'Sumatif 2', 'Sumatif 3', 'Sumatif 4', 'Sumatif Akhir Semester']);
+    const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
     
     // Manual Edit State
     const [isEditMode, setIsEditMode] = useState(false);
@@ -47,6 +49,17 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
             setData(sorted);
             const config = await api.getAppConfig();
             setGlobalConfig(config);
+            setSubjectsDb(getSubjects(config));
+            if (config['EXAM_TYPES']) {
+                try {
+                    const parsed = JSON.parse(config['EXAM_TYPES']);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setExamTypes(parsed);
+                    }
+                } catch (e) {
+                    console.error("Failed to parse EXAM_TYPES", e);
+                }
+            }
         } catch (e) {
             console.error("Failed to load recap data", e);
         } finally {
@@ -153,19 +166,18 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
 
         // 2. Init Rows
         eligibleStudents.forEach(s => {
-            studentRows[s.username] = {
+            const row: any = {
                 username: s.username,
                 nama: s.fullname,
                 kelas: s.kelas,
-                sumatif1: '-',
-                sumatif2: '-',
-                sumatif3: '-',
-                sumatif4: '-',
-                sas: '-',
                 avg: 0,
                 scoreCount: 0,
                 totalScore: 0
             };
+            examTypes.forEach(t => {
+                row[t] = '-';
+            });
+            studentRows[s.username] = row;
         });
 
         // 3. Map Scores (Pivoting Logic)
@@ -175,43 +187,44 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
             if (row) {
                 const score = parseFloat(d.nilai) || 0;
                 
-                // LOGIC: Map Exam Type to Column Key using Regex for robustness
+                // LOGIC: Map Exam Type to Column Key
                 let colKey = '';
                 
                 // Fallback to user profile exam type if missing in result (Legacy Support)
                 const userProfile = userMap[String(d.username).toLowerCase().trim()];
                 const rawExamType = d.exam_type || userProfile?.exam_type || '';
-                const eType = rawExamType.toLowerCase().trim();
                 
-                if (eType) {
-                    // Sumatif 1 / PH 1 / LM 1
-                    if (/sumatif\s*1|ph\s*1|lingkup materi\s*1|lm\s*1/.test(eType)) colKey = 'sumatif1';
-                    
-                    // Sumatif 2 / PH 2 / LM 2
-                    else if (/sumatif\s*2|ph\s*2|lingkup materi\s*2|lm\s*2/.test(eType)) colKey = 'sumatif2';
-                    
-                    // Sumatif 3 / PH 3 / STS / PTS / Tengah Semester
-                    else if (/sumatif\s*3|ph\s*3|lingkup materi\s*3|lm\s*3|sts|pts|tengah semester/.test(eType)) colKey = 'sumatif3';
-                    
-                    // Sumatif 4 / PH 4 / LM 4
-                    else if (/sumatif\s*4|ph\s*4|lingkup materi\s*4|lm\s*4/.test(eType)) colKey = 'sumatif4';
-                    
-                    // Akhir Semester (SAS/PAS/UAS)
-                    else if (/sas|pas|uas|akhir semester|sumatif akhir/.test(eType)) colKey = 'sas';
+                // Direct match first
+                if (examTypes.includes(rawExamType)) {
+                    colKey = rawExamType;
+                } else {
+                    // Try case-insensitive match
+                    const eType = rawExamType.toLowerCase().trim();
+                    const matchedType = examTypes.find(t => t.toLowerCase().trim() === eType);
+                    if (matchedType) {
+                        colKey = matchedType;
+                    } else if (eType) {
+                        // Legacy regex matching if no direct match found
+                        if (/sumatif\s*1|ph\s*1|lingkup materi\s*1|lm\s*1/.test(eType)) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 1')) || '';
+                        else if (/sumatif\s*2|ph\s*2|lingkup materi\s*2|lm\s*2/.test(eType)) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 2')) || '';
+                        else if (/sumatif\s*3|ph\s*3|lingkup materi\s*3|lm\s*3|sts|pts|tengah semester/.test(eType)) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 3')) || '';
+                        else if (/sumatif\s*4|ph\s*4|lingkup materi\s*4|lm\s*4/.test(eType)) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 4')) || '';
+                        else if (/sas|pas|uas|akhir semester|sumatif akhir/.test(eType)) colKey = examTypes.find(t => t.toLowerCase().includes('akhir')) || '';
+                    }
                 }
                 
                 // Fallback: Jika Exam Type kosong, coba gunakan Nama Mapel (Legacy support)
-                if (!colKey && !eType) {
+                if (!colKey && !rawExamType) {
                     const mapelLower = (d.mapel || '').toLowerCase();
-                    if (mapelLower.includes('sumatif 1')) colKey = 'sumatif1';
-                    else if (mapelLower.includes('sumatif 2')) colKey = 'sumatif2';
-                    else if (mapelLower.includes('sumatif 3')) colKey = 'sumatif3';
-                    else if (mapelLower.includes('sumatif 4')) colKey = 'sumatif4';
-                    else if (mapelLower.includes('akhir') || mapelLower.includes('sas')) colKey = 'sas';
+                    if (mapelLower.includes('sumatif 1')) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 1')) || '';
+                    else if (mapelLower.includes('sumatif 2')) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 2')) || '';
+                    else if (mapelLower.includes('sumatif 3')) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 3')) || '';
+                    else if (mapelLower.includes('sumatif 4')) colKey = examTypes.find(t => t.toLowerCase().includes('sumatif 4')) || '';
+                    else if (mapelLower.includes('akhir') || mapelLower.includes('sas')) colKey = examTypes.find(t => t.toLowerCase().includes('akhir')) || '';
                 }
                 
                 // Override score if colKey determined
-                if (colKey) {
+                if (colKey && examTypes.includes(colKey)) {
                     // Check if there is an edit in progress
                     const editKey = `${d.username}_${colKey}`;
                     if (editedCells[editKey]) {
@@ -231,7 +244,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
         Object.values(studentRows).forEach((row: any) => {
             let sum = 0;
             let count = 0;
-            ['sumatif1', 'sumatif2', 'sumatif3', 'sumatif4', 'sas'].forEach(k => {
+            examTypes.forEach(k => {
                 const val = parseFloat(row[k]);
                 if (!isNaN(val)) {
                     sum += val;
@@ -243,7 +256,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
 
         return Object.values(studentRows).sort((a: any, b: any) => a.nama.localeCompare(b.nama));
 
-    }, [filteredData, students, viewMode, filterSubject, filterClass, filterSchool, filterKecamatan, currentUser, editedCells, userMap]);
+    }, [filteredData, students, viewMode, filterSubject, filterClass, filterSchool, filterKecamatan, currentUser, editedCells, userMap, examTypes]);
 
     // Handle Manual Input Change
     const handleCellChange = (username: string, field: string, value: string) => {
@@ -257,21 +270,14 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
     const saveManualEdits = async () => {
         const changes: ExternalGrade[] = [];
         Object.keys(editedCells).forEach(key => {
-            const [username, field] = key.split('_');
+            const [username, ...fieldParts] = key.split('_');
+            const field = fieldParts.join('_'); // Rejoin in case examType has underscores
             const val = parseFloat(editedCells[key].val);
             if (!isNaN(val)) {
-                // Map field key back to proper Exam Type Name for DB storage
-                let examType = '';
-                if(field === 'sumatif1') examType = 'Sumatif 1';
-                else if(field === 'sumatif2') examType = 'Sumatif 2';
-                else if(field === 'sumatif3') examType = 'Sumatif 3';
-                else if(field === 'sumatif4') examType = 'Sumatif 4';
-                else if(field === 'sas') examType = 'Sumatif Akhir Semester';
-
                 changes.push({
                     username,
                     mapel: filterSubject, // Must filter by specific subject to edit
-                    exam_type: examType,
+                    exam_type: field,
                     nilai: val
                 });
             }
@@ -342,25 +348,26 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
 
     const downloadImportTemplate = () => {
         const rows = [
-            { "Username": "user01", "Mapel": "Matematika", "Jenis Ujian": "Sumatif 1", "Nilai": 90 },
-            { "Username": "user01", "Mapel": "Matematika", "Jenis Ujian": "Sumatif Akhir Semester", "Nilai": 85 }
+            { "Username": "user01", "Mapel": "Matematika", "Jenis Ujian": examTypes[0] || "Sumatif 1", "Nilai": 90 },
+            { "Username": "user01", "Mapel": "Matematika", "Jenis Ujian": examTypes[1] || "Sumatif Akhir Semester", "Nilai": 85 }
         ];
         exportToExcel(rows, "Template_Import_Nilai", "Template");
     };
 
     const handleExport = () => {
         if (viewMode === 'matrix') {
-            const exportData = matrixData.map((d, i) => ({
-                "No": i + 1,
-                "Username": d.username,
-                "Nama Murid": d.nama,
-                "Sumatif 1": d.sumatif1,
-                "Sumatif 2": d.sumatif2,
-                "Sumatif 3": d.sumatif3,
-                "Sumatif 4": d.sumatif4,
-                "Akhir Semester": d.sas,
-                "Nilai Akhir": d.avg
-            }));
+            const exportData = matrixData.map((d, i) => {
+                const row: any = {
+                    "No": i + 1,
+                    "Username": d.username,
+                    "Nama Murid": d.nama
+                };
+                examTypes.forEach(t => {
+                    row[t] = d[t];
+                });
+                row["Nilai Akhir"] = d.avg;
+                return row;
+            });
             exportToExcel(exportData, `Rekap_Nilai_Sumatif_${filterSubject || 'Semua'}`);
         } else {
             const exportData = filteredData.map((d, i) => {
@@ -393,6 +400,45 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
         const displayTahun = globalConfig['ACADEMIC_YEAR'] || '2025/2026';
         const displaySchool = globalConfig['SCHOOL_NAME'] || (currentUser.kelas_id || '...........................');
         
+        // Determine the dominant exam type for this view to pick the right signature
+        // If they are viewing all, we just pick the first one or a default
+        let dominantExamType = examTypes[0] || 'Sumatif 1';
+        
+        // Signature Variables
+        let kepSekName = globalConfig['PRINCIPAL_NAME'] || '...........................';
+        let kepSekNip = globalConfig['PRINCIPAL_NIP'] || '-';
+        let kepSekTitle = 'Kepala Sekolah';
+        let guruName = globalConfig['TEACHER_NAME'] || '...........................';
+        let guruNip = globalConfig['TEACHER_NIP'] || '-';
+        let guruJabatan = globalConfig['TEACHER_POSITION'] || 'Guru Kelas';
+
+        if (currentUser.role === 'Guru') {
+            guruName = currentUser.nama_lengkap;
+            guruNip = currentUser.username;
+            if (!globalConfig['TEACHER_POSITION'] && currentUser.kelas && currentUser.kelas !== '-') {
+                guruJabatan = `Guru Kelas ${currentUser.kelas}`;
+            }
+        }
+
+        if (globalConfig['EXAM_SIGNATORIES']) {
+            try {
+                const signatories = JSON.parse(globalConfig['EXAM_SIGNATORIES']);
+                if (signatories[dominantExamType]) {
+                    const sig = signatories[dominantExamType];
+                    kepSekTitle = sig.leftTitle || kepSekTitle;
+                    kepSekName = sig.leftName || kepSekName;
+                    kepSekNip = sig.leftNip || kepSekNip;
+                    guruJabatan = sig.rightTitle || guruJabatan;
+                    guruName = sig.rightName || guruName;
+                    guruNip = sig.rightNip || guruNip;
+                }
+            } catch (e) {
+                console.error("Failed to parse EXAM_SIGNATORIES", e);
+            }
+        }
+
+        const dateNow = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
@@ -401,14 +447,12 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                 <td style="text-align: center;">${i + 1}</td>
                 <td style="font-family: monospace;">${d.username}</td>
                 <td>${d.nama}</td>
-                <td style="text-align: center;">${d.sumatif1}</td>
-                <td style="text-align: center;">${d.sumatif2}</td>
-                <td style="text-align: center;">${d.sumatif3}</td>
-                <td style="text-align: center;">${d.sumatif4}</td>
-                <td style="text-align: center;">${d.sas}</td>
+                ${examTypes.map(t => `<td style="text-align: center;">${d[t]}</td>`).join('')}
                 <td style="text-align: center; font-weight: bold;">${d.avg}</td>
             </tr>
         `).join('');
+
+        const headersHtml = examTypes.map(t => `<th width="70">${t}</th>`).join('');
 
         const htmlContent = `
             <!DOCTYPE html>
@@ -424,6 +468,11 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                     table.data { width: 100%; border-collapse: collapse; }
                     table.data th, table.data td { border: 1px solid #000; padding: 5px; }
                     table.data th { background-color: #f0f0f0; text-align: center; }
+                    .footer { margin-top: 40px; display: flex; justify-content: space-between; padding: 0 50px; page-break-inside: avoid; }
+                    .signature-box { text-align: center; width: 250px; }
+                    .signature-space { height: 80px; }
+                    .sig-name { font-weight: bold; text-decoration: underline; margin-bottom: 2px; }
+                    .sig-nip { margin-top: 0; }
                 </style>
             </head>
             <body>
@@ -442,11 +491,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                             <th width="40">No</th>
                             <th>Username</th>
                             <th>Nama Murid</th>
-                            <th width="70">Sumatif 1</th>
-                            <th width="70">Sumatif 2</th>
-                            <th width="70">Sumatif 3</th>
-                            <th width="70">Sumatif 4</th>
-                            <th width="80">Akhir Sem.</th>
+                            ${headersHtml}
                             <th width="80">Nilai Akhir</th>
                         </tr>
                     </thead>
@@ -454,6 +499,16 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                         ${rowsHtml}
                     </tbody>
                 </table>
+                <div class="footer">
+                    <div class="signature-box">
+                        <p>Mengetahui,</p><p>${kepSekTitle}</p><div class="signature-space"></div>
+                        <p class="sig-name">${kepSekName}</p><p class="sig-nip">NIP. ${kepSekNip}</p>
+                    </div>
+                    <div class="signature-box">
+                        <p>Tuban, ${dateNow}</p><p>${guruJabatan}</p><div class="signature-space"></div>
+                        <p class="sig-name">${guruName}</p><p class="sig-nip">NIP. ${guruNip}</p>
+                    </div>
+                </div>
                 <script>window.onload = function() { window.print(); }</script>
             </body>
             </html>
@@ -591,17 +646,15 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                                         <th className="p-4 w-12 text-center border-b border-slate-200">No</th>
                                         <th className="p-4 border-b border-slate-200">Username</th>
                                         <th className="p-4 border-b border-slate-200">Nama Murid</th>
-                                        <th className="p-4 text-center border-b border-slate-200 bg-indigo-50/30">Sumatif 1</th>
-                                        <th className="p-4 text-center border-b border-slate-200 bg-indigo-50/30">Sumatif 2</th>
-                                        <th className="p-4 text-center border-b border-slate-200 bg-indigo-50/30">Sumatif 3</th>
-                                        <th className="p-4 text-center border-b border-slate-200 bg-indigo-50/30">Sumatif 4</th>
-                                        <th className="p-4 text-center border-b border-slate-200 bg-purple-50/30">Akhir Sem.</th>
+                                        {examTypes.map((t, idx) => (
+                                            <th key={idx} className={`p-4 text-center border-b border-slate-200 ${idx % 2 === 0 ? 'bg-indigo-50/30' : 'bg-purple-50/30'}`}>{t}</th>
+                                        ))}
                                         <th className="p-4 text-center border-b border-slate-200 bg-emerald-50/30 font-black">Nilai Akhir</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {matrixData.length === 0 ? (
-                                        <tr><td colSpan={9} className="p-12 text-center text-slate-400 italic">Data tidak ditemukan untuk mapel "{filterSubject}".</td></tr>
+                                        <tr><td colSpan={4 + examTypes.length} className="p-12 text-center text-slate-400 italic">Data tidak ditemukan untuk mapel "{filterSubject}".</td></tr>
                                     ) : matrixData.map((d: any, i: number) => {
                                         const renderCell = (field: string, val: any) => {
                                             const key = `${d.username}_${field}`;
@@ -626,11 +679,9 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                                             <td className="p-4 text-center text-slate-500">{i + 1}</td>
                                             <td className="p-4 font-mono text-slate-500 font-bold text-xs">{d.username}</td>
                                             <td className="p-4 font-bold text-slate-700">{d.nama}</td>
-                                            <td className="p-4 text-center text-slate-600">{renderCell('sumatif1', d.sumatif1)}</td>
-                                            <td className="p-4 text-center text-slate-600">{renderCell('sumatif2', d.sumatif2)}</td>
-                                            <td className="p-4 text-center text-slate-600">{renderCell('sumatif3', d.sumatif3)}</td>
-                                            <td className="p-4 text-center text-slate-600">{renderCell('sumatif4', d.sumatif4)}</td>
-                                            <td className="p-4 text-center font-bold text-indigo-600">{renderCell('sas', d.sas)}</td>
+                                            {examTypes.map((t, idx) => (
+                                                <td key={idx} className="p-4 text-center text-slate-600">{renderCell(t, d[t])}</td>
+                                            ))}
                                             <td className="p-4 text-center font-black text-emerald-600 bg-emerald-50/10">{d.avg}</td>
                                         </tr>
                                         );

@@ -231,8 +231,9 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     const displayTahun = globalConfig['ACADEMIC_YEAR'] || '2025/2026';
 
     // Signature Variables (Sync with Print logic)
-    const kepSekName = globalConfig['PRINCIPAL_NAME'] || '...........................';
-    const kepSekNip = globalConfig['PRINCIPAL_NIP'] || '-';
+    let kepSekName = globalConfig['PRINCIPAL_NAME'] || '...........................';
+    let kepSekNip = globalConfig['PRINCIPAL_NIP'] || '-';
+    let kepSekTitle = 'Kepala Sekolah';
     let guruName = globalConfig['TEACHER_NAME'] || '...........................';
     let guruNip = globalConfig['TEACHER_NIP'] || '-';
     let guruJabatan = globalConfig['TEACHER_POSITION'] || 'Guru Kelas';
@@ -242,6 +243,23 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
         guruNip = currentUser.username;
         if (!globalConfig['TEACHER_POSITION'] && currentUser.kelas && currentUser.kelas !== '-') {
             guruJabatan = `Guru Kelas ${currentUser.kelas}`;
+        }
+    }
+
+    if (globalConfig['EXAM_SIGNATORIES']) {
+        try {
+            const signatories = JSON.parse(globalConfig['EXAM_SIGNATORIES']);
+            if (signatories[displayJenisUjian]) {
+                const sig = signatories[displayJenisUjian];
+                kepSekTitle = sig.leftTitle || kepSekTitle;
+                kepSekName = sig.leftName || kepSekName;
+                kepSekNip = sig.leftNip || kepSekNip;
+                guruJabatan = sig.rightTitle || guruJabatan;
+                guruName = sig.rightName || guruName;
+                guruNip = sig.rightNip || guruNip;
+            }
+        } catch (e) {
+            console.error("Failed to parse EXAM_SIGNATORIES", e);
         }
     }
 
@@ -382,7 +400,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                     </table>
                     <div class="footer">
                         <div class="signature-box">
-                            <p>Mengetahui,</p><p>Kepala Sekolah</p><div class="signature-space"></div>
+                            <p>Mengetahui,</p><p>${kepSekTitle}</p><div class="signature-space"></div>
                             <p class="sig-name">${kepSekName}</p><p class="sig-nip">NIP. ${kepSekNip}</p>
                         </div>
                         <div class="signature-box">
@@ -625,7 +643,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                         <div style={styles.footer}>
                             <div style={styles.sigBox}>
                                 <p style={{ margin: 0 }}>Mengetahui,</p>
-                                <p style={{ margin: 0 }}>Kepala Sekolah</p>
+                                <p style={{ margin: 0 }}>{kepSekTitle}</p>
                                 <div style={styles.sigSpace}></div>
                                 <p style={styles.sigName}>{kepSekName}</p>
                                 <p style={styles.sigNip}>NIP. {kepSekNip}</p>

@@ -4,11 +4,11 @@ import { FileQuestion, Download, Upload, Loader2, Plus, Edit, Trash2, X, Save, I
 import { api } from '../../src/services/api';
 import { QuestionRow, LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
-import { SUBJECTS_DB } from '../../utils/adminHelpers';
+import { exportToExcel, getSubjects } from '../../utils/adminHelpers';
 
 const BankSoalTab = () => {
-    // Use SUBJECTS_DB for source of truth
-    const [selectedSubject, setSelectedSubject] = useState(SUBJECTS_DB[0]?.label || '');
+    const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
+    const [selectedSubject, setSelectedSubject] = useState('');
     const [questions, setQuestions] = useState<QuestionRow[]>([]);
     const [tps, setTps] = useState<LearningObjective[]>([]); // Store all TPs
     const [loadingData, setLoadingData] = useState(false);
@@ -22,6 +22,13 @@ const BankSoalTab = () => {
 
     useEffect(() => {
         const loadInitial = async () => {
+            const config = await api.getAppConfig();
+            const subjects = getSubjects(config);
+            setSubjectsDb(subjects);
+            if (subjects.length > 0) {
+                setSelectedSubject(subjects[0].label);
+            }
+
             // Load TPs for linking
             const tpData = await api.getLearningObjectives();
             setTps(tpData);
@@ -289,7 +296,7 @@ const BankSoalTab = () => {
                                 value={selectedSubject}
                                 onChange={e => setSelectedSubject(e.target.value)}
                             >
-                                {SUBJECTS_DB.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
+                                {subjectsDb.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                             </select>
                             
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-0 sm:ml-2">Kelas:</span>

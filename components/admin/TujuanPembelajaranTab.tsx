@@ -4,9 +4,10 @@ import { Target, Plus, Download, Upload, Search, Edit, Trash2, Loader2, X, Save,
 import { api } from '../../src/services/api';
 import { LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
-import { exportToExcel, SUBJECTS_DB } from '../../utils/adminHelpers';
+import { exportToExcel, getSubjects } from '../../utils/adminHelpers';
 
 const TujuanPembelajaranTab = () => {
+    const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
     const [objectives, setObjectives] = useState<LearningObjective[]>([]);
     const [loading, setLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -25,6 +26,9 @@ const TujuanPembelajaranTab = () => {
     const loadData = async () => {
         setLoading(true);
         try {
+            const config = await api.getAppConfig();
+            setSubjectsDb(getSubjects(config));
+
             const data = await api.getLearningObjectives();
             setObjectives(data);
         } catch(e) { console.error(e); } 
@@ -77,7 +81,7 @@ const TujuanPembelajaranTab = () => {
         }
         
         // Find Subject Code
-        const subj = SUBJECTS_DB.find(s => s.label === formData.mapel);
+        const subj = subjectsDb.find(s => s.label === formData.mapel);
         const code = subj ? subj.id : formData.mapel.substring(0, 3).toUpperCase();
         
         // Random number 3 digits
@@ -119,7 +123,7 @@ const TujuanPembelajaranTab = () => {
         const defaultKelas = filterKelas !== 'all' ? filterKelas : "1";
         
         // Try to generate a smart ID example
-        const subj = SUBJECTS_DB.find(s => s.label === defaultMapel);
+        const subj = subjectsDb.find(s => s.label === defaultMapel);
         const code = subj ? subj.id : "MTK";
         const exampleId = `TP-${code}-K${defaultKelas}-101`;
 
@@ -188,7 +192,7 @@ const TujuanPembelajaranTab = () => {
                     // 2. Logic: Auto Generate ID jika kosong
                     if (!id && mapel) {
                          // Cari kode mapel dari DB Subject
-                         const subj = SUBJECTS_DB.find(s => s.label.toLowerCase() === mapel.toLowerCase());
+                         const subj = subjectsDb.find(s => s.label.toLowerCase() === mapel.toLowerCase());
                          const code = subj ? subj.id : mapel.substring(0, 3).toUpperCase();
                          // Generate ID unik: TP-[MAPEL]-K[KELAS]-[RANDOM]
                          const kCode = kelas ? `K${kelas}` : 'KX';
@@ -303,7 +307,7 @@ const TujuanPembelajaranTab = () => {
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Mata Pelajaran</label>
                                         <select required className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:border-indigo-500 outline-none cursor-pointer" value={formData.mapel} onChange={e => setFormData({...formData, mapel: e.target.value})}>
                                             <option value="">-- Pilih Mapel --</option>
-                                            {SUBJECTS_DB.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
+                                            {subjectsDb.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                                         </select>
                                     </div>
                                     <div>

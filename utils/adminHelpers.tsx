@@ -3,7 +3,7 @@ import React from 'react';
 import * as XLSX from 'xlsx';
 
 // DAFTAR MAPEL BAKU & KODE ID
-export const SUBJECTS_DB = [
+export const DEFAULT_SUBJECTS_DB = [
     { id: "PAI", label: "Pendidikan Agama Islam" },
     { id: "PKN", label: "Pendidikan Pancasila" },
     { id: "BIN", label: "Bahasa Indonesia" }, 
@@ -14,6 +14,60 @@ export const SUBJECTS_DB = [
     { id: "BJW", label: "Bahasa Jawa" }, 
     { id: "ING", label: "Bahasa Inggris" } 
 ];
+
+export const DEFAULT_EXAM_TYPES = [
+    { id: "OSN", label: "OSN" },
+    { id: "LCC", label: "Lomba Cerdas Cermat" },
+    { id: "TKA", label: "TKA" },
+    { id: "SUMATIF", label: "Sumatif" },
+    { id: "LITERASI", label: "Lomba Literasi/Numerasi" }
+];
+
+export const DEFAULT_EXAM_SUBJECT_MAPPING = [
+    { examTypeId: "OSN", subjectIds: ["IPAS", "MTK", "PAI"] }, // Example mapping
+    { examTypeId: "LCC", subjectIds: ["UMUM"] },
+    { examTypeId: "TKA", subjectIds: ["MTK", "BIN"] },
+    { examTypeId: "SUMATIF", subjectIds: DEFAULT_SUBJECTS_DB.map(s => s.id) },
+    { examTypeId: "LITERASI", subjectIds: ["LITERASI", "NUMERASI"] }
+];
+
+export const getSubjects = (config: Record<string, string>) => {
+    if (config['SUBJECTS_DB']) {
+        try {
+            const parsed = JSON.parse(config['SUBJECTS_DB']);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+            console.error("Failed to parse SUBJECTS_DB", e);
+        }
+    }
+    return DEFAULT_SUBJECTS_DB;
+};
+
+export const getExamTypes = (config: Record<string, string>) => {
+    if (config['EXAM_TYPES_DB']) {
+        try {
+            const parsed = JSON.parse(config['EXAM_TYPES_DB']);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+            console.error("Failed to parse EXAM_TYPES_DB", e);
+        }
+    }
+    return DEFAULT_EXAM_TYPES;
+};
+
+export const getExamSubjectMapping = (config: Record<string, string>) => {
+    if (config['EXAM_SUBJECT_MAPPING_DB']) {
+        try {
+            const parsed = JSON.parse(config['EXAM_SUBJECT_MAPPING_DB']);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+            console.error("Failed to parse EXAM_SUBJECT_MAPPING_DB", e);
+        }
+    }
+    return DEFAULT_EXAM_SUBJECT_MAPPING;
+};
+
+export const SUBJECTS_DB = DEFAULT_SUBJECTS_DB; // Fallback for backward compatibility
 
 // Helper to format duration string "HH:mm:ss" or "mm:ss" to text "X Jam Y Menit Z Detik"
 export const formatDurationToText = (duration: string) => {
