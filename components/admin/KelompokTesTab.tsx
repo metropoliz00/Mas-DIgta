@@ -8,11 +8,9 @@ import { getSubjects, getExamTypes, getExamSubjectMapping } from '../../utils/ad
 
 const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: User, students: any[], refreshData: () => void }) => {
     const { showToast } = useToast();
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [selectedExam, setSelectedExam] = useState('');
-    
     // Logic TP
     const [tps, setTps] = useState<LearningObjective[]>([]);
+    const [selectedExam, setSelectedExam] = useState('');
     const [selectedTp, setSelectedTp] = useState('');
     
     // Logic Exam Type
@@ -33,12 +31,10 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
 
     useEffect(() => {
         const loadInitial = async () => {
-            const [examData, tpData, config] = await Promise.all([
-                api.getExams(),
+            const [tpData, config] = await Promise.all([
                 api.getLearningObjectives(),
                 api.getAppConfig()
             ]);
-            setExams(examData);
             setTps(tpData);
             
             const types = getExamTypes(config);
@@ -78,31 +74,22 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
         );
     }, [studentList]);
 
-    const filteredExams = useMemo(() => {
+    const filteredSubjects = useMemo(() => {
         const mapping = examSubjectMapping.find(m => m.examTypeId === selectedExamType);
-        if (!mapping || mapping.subjectIds.length === 0) return exams;
+        if (!mapping || mapping.subjectIds.length === 0) return subjectsDb;
         
-        const allowedSubjectLabels = subjectsDb
-            .filter(s => mapping.subjectIds.includes(s.id))
-            .map(s => s.label.toLowerCase());
-            
-        return exams.filter(e => {
-            const examName = e.nama_ujian.toLowerCase();
-            return allowedSubjectLabels.some(label => examName.includes(label));
-        });
-    }, [exams, selectedExamType, examSubjectMapping, subjectsDb]);
+        return subjectsDb.filter(s => mapping.subjectIds.includes(s.id));
+    }, [subjectsDb, selectedExamType, examSubjectMapping]);
 
     const filteredTps = useMemo(() => {
         if (!selectedExam) return [];
-        const exam = exams.find(e => e.id === selectedExam);
-        if (!exam) return [];
-        
-        const examNameLower = exam.nama_ujian.toLowerCase();
+        // Match TP Mapel with selectedExam (which is now the Subject Label)
+        const examNameLower = selectedExam.toLowerCase();
         
         return tps.filter(tp => {
             return examNameLower.includes((tp.mapel || '').toLowerCase());
         });
-    }, [selectedExam, exams, tps]);
+    }, [selectedExam, tps]);
 
     // Reset selected TP when exam changes
     useEffect(() => {
@@ -182,7 +169,7 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Pilih Ujian (Mapel)</label>
                          <select className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 font-bold text-indigo-700" value={selectedExam} onChange={e => setSelectedExam(e.target.value)}>
                             <option value="">-- Pilih Ujian --</option>
-                            {filteredExams.map(e => <option key={e.id} value={e.id}>{e.nama_ujian}</option>)}
+                            {filteredSubjects.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                         </select>
                     </div>
 

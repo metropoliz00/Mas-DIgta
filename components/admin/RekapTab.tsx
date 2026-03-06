@@ -99,7 +99,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
     }, [students]);
 
     const uniqueSubjects = useMemo(() => {
-        const subjs = new Set(data.map(d => d.mapel).filter(Boolean));
+        const subjs = new Set(data.map(d => d.exam_id).filter(Boolean));
         return Array.from(subjs).sort();
     }, [data]);
 
@@ -137,8 +137,8 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
             // For Matrix View, we filter subject differently (substring match for grouping)
             // For List View, we filter strictly
             const matchSubject = viewMode === 'matrix' 
-                ? (filterSubject === 'all' || d.mapel.toLowerCase().includes(filterSubject.toLowerCase()))
-                : (filterSubject === 'all' || d.mapel === filterSubject);
+                ? (filterSubject === 'all' || (d.exam_id || '').toLowerCase().includes(filterSubject.toLowerCase()))
+                : (filterSubject === 'all' || d.exam_id === filterSubject);
 
             return matchSchool && matchKecamatan && matchClass && matchSubject;
         });
@@ -736,7 +736,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                                         <td className="p-4 text-slate-600 text-xs">{d.sekolah}</td>
                                         {currentUser.role === 'admin' && <td className="p-4 text-slate-600 text-xs">{userKec}</td>}
                                         <td className="p-4 text-center border-l border-slate-100 bg-indigo-50/10 font-bold text-indigo-700 text-xs">
-                                            {d.mapel}
+                                            {d.exam_id}
                                         </td>
                                         <td className="p-4 text-center border-l border-slate-100 bg-blue-50/10 text-xs text-slate-600 font-medium">
                                             {displayExamType}

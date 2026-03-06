@@ -4,11 +4,12 @@ import { FileQuestion, Download, Upload, Loader2, Plus, Edit, Trash2, X, Save, I
 import { api } from '../../src/services/api';
 import { QuestionRow, LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
-import { exportToExcel, getSubjects, getExamTypes } from '../../utils/adminHelpers';
+import { exportToExcel, getSubjects, getExamTypes, getExamSubjectMapping } from '../../utils/adminHelpers';
 
 const BankSoalTab = () => {
     const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
     const [examTypes, setExamTypes] = useState<{id: string, label: string}[]>([]); // Store Exam Types
+    const [examSubjectMapping, setExamSubjectMapping] = useState<{examTypeId: string, subjectIds: string[]}[]>([]); // Store Mapping
     const [selectedSubject, setSelectedSubject] = useState('');
     const [questions, setQuestions] = useState<QuestionRow[]>([]);
     const [tps, setTps] = useState<LearningObjective[]>([]); // Store all TPs
@@ -27,8 +28,10 @@ const BankSoalTab = () => {
             const config = await api.getAppConfig();
             const subjects = getSubjects(config);
             const types = getExamTypes(config);
+            const mapping = getExamSubjectMapping(config);
             setSubjectsDb(subjects);
             setExamTypes(types);
+            setExamSubjectMapping(mapping);
             if (subjects.length > 0) {
                 setSelectedSubject(subjects[0].label);
             }
@@ -39,6 +42,26 @@ const BankSoalTab = () => {
         };
         loadInitial();
     }, []);
+
+    // Derived Subjects based on Exam Type Filter
+    const availableSubjects = useMemo(() => {
+        if (filterJenisUjian === 'all') return subjectsDb;
+        const mapping = examSubjectMapping.find(m => m.examTypeId === filterJenisUjian);
+        if (!mapping) return subjectsDb;
+        return subjectsDb.filter(s => mapping.subjectIds.includes(s.id));
+    }, [subjectsDb, filterJenisUjian, examSubjectMapping]);
+
+    // Auto-select first subject if current selection is invalid for the new filter
+    useEffect(() => {
+        if (availableSubjects.length > 0) {
+            const exists = availableSubjects.find(s => s.label === selectedSubject);
+            if (!exists) {
+                setSelectedSubject(availableSubjects[0].label);
+            }
+        } else if (availableSubjects.length === 0 && selectedSubject) {
+             setSelectedSubject('');
+        }
+    }, [availableSubjects, selectedSubject]);
 
     useEffect(() => {
         if (!selectedSubject) return;
@@ -301,13 +324,23 @@ const BankSoalTab = () => {
                     <div>
                         <h3 className="font-black text-xl text-slate-800">Bank Soal</h3>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Database:</span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Jenis Ujian:</span>
+                            <select 
+                                className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1 outline-none cursor-pointer"
+                                value={filterJenisUjian}
+                                onChange={e => setFilterJenisUjian(e.target.value)}
+                            >
+                                <option value="all">Semua</option>
+                                {examTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                            </select>
+
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-0 sm:ml-2">Database:</span>
                             <select 
                                 className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1 outline-none cursor-pointer"
                                 value={selectedSubject}
                                 onChange={e => setSelectedSubject(e.target.value)}
                             >
-                                {subjectsDb.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
+                                {availableSubjects.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                             </select>
                             
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-0 sm:ml-2">Kelas:</span>
@@ -332,16 +365,6 @@ const BankSoalTab = () => {
                                         {tp.id}
                                     </option>
                                 ))}
-                            </select>
-
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-0 sm:ml-2">Jenis Ujian:</span>
-                            <select 
-                                className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1 outline-none cursor-pointer"
-                                value={filterJenisUjian}
-                                onChange={e => setFilterJenisUjian(e.target.value)}
-                            >
-                                <option value="all">Semua</option>
-                                {examTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                             </select>
                         </div>
                     </div>

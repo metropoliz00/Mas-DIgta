@@ -7,7 +7,6 @@ import { Exam, User, LearningObjective } from '../../types';
 
 const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: any[] }) => {
     const { showToast } = useToast();
-    const [exams, setExams] = useState<Exam[]>([]);
     const [tps, setTps] = useState<LearningObjective[]>([]);
     const [selectedExam, setSelectedExam] = useState('');
     
@@ -20,6 +19,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     
     // Global Config State (Loaded from API)
     const [globalConfig, setGlobalConfig] = useState<Record<string, string>>({});
+    const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
 
     // Local Filter & Config States
     const [filterClass, setFilterClass] = useState('all'); // Filter Table
@@ -38,10 +38,6 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     }, [students]);
 
     useEffect(() => { 
-        // Load Exams
-        api.getExams().then(res => {
-            setExams(res.filter(e => !e.id.startsWith('Survey_')));
-        });
         // Load TPs
         setLoadingTps(true);
         api.getLearningObjectives().then(res => {
@@ -60,6 +56,14 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                     if (!isNaN(serverKktp)) {
                         setKktp(serverKktp);
                     }
+                }
+
+                // Load Subjects from Config
+                if (gConfig['SUBJECTS_DB']) {
+                    try {
+                        const parsed = JSON.parse(gConfig['SUBJECTS_DB']);
+                        if (Array.isArray(parsed)) setSubjectsDb(parsed);
+                    } catch (e) { console.error("Failed to parse SUBJECTS_DB", e); }
                 }
 
                 let combinedConfig = { ...gConfig };
@@ -85,10 +89,10 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     // Filter TPs based on selected Exam (Mapel)
     const relevantTps = useMemo(() => {
         if (!selectedExam) return [];
-        const examName = exams.find(e => e.id === selectedExam)?.nama_ujian || '';
+        const examName = selectedExam; // selectedExam is now the Label
         // Match TP Mapel exactly
         return tps.filter(t => t.mapel === examName);
-    }, [tps, selectedExam, exams]);
+    }, [tps, selectedExam]);
 
     // Load Data when Exam Selected
     useEffect(() => {
@@ -102,10 +106,13 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
             setLoading(true);
             try {
                 const qData = await api.getQuestions(selectedExam);
-                const currentExamConfig = exams.find(e => e.id === selectedExam);
+                
+                // Use Global MAX_QUESTIONS if available
                 let finalQuestions = qData;
-                if (currentExamConfig && currentExamConfig.max_questions && currentExamConfig.max_questions > 0) {
-                    finalQuestions = qData.slice(0, currentExamConfig.max_questions);
+                const globalMax = globalConfig['MAX_QUESTIONS'] ? parseInt(globalConfig['MAX_QUESTIONS']) : 0;
+                
+                if (globalMax > 0) {
+                    finalQuestions = qData.slice(0, globalMax);
                 }
                 setQuestionsData(finalQuestions);
 
@@ -131,7 +138,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
             }
         };
         fetchData();
-    }, [selectedExam, exams]); // Removed 'tps' from dep to prevent loop, 'tps' is loaded once
+    }, [selectedExam, globalConfig]); // Removed 'tps' from dep to prevent loop, 'tps' is loaded once
 
     // FILTER ONLY STUDENTS FOR CLASS LIST (Requirement: Users only, no admins)
     const uniqueClasses = useMemo(() => {
@@ -227,7 +234,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     const representativeStudent = rows.length > 0 ? userMap[rows[0].username] : null;
     const displayJenisUjian = representativeStudent?.exam_type || '-';
     const displaySchool = globalConfig['SCHOOL_NAME'] || (representativeStudent?.school) || '...........................';
-    const displayMapel = exams.find(e => e.id === selectedExam)?.nama_ujian || selectedExam;
+    const displayMapel = selectedExam;
     const displayKelas = filterClass !== 'all' ? filterClass : 'Semua Kelas';
     const displaySemester = globalConfig['SEMESTER'] || '1 (Ganjil)';
     const displayTahun = globalConfig['ACADEMIC_YEAR'] || '2025/2026';
@@ -441,7 +448,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
                         <div className="h-8 w-px bg-slate-200 mx-1"></div>
                         <select className="p-2 border border-slate-200 rounded-lg text-sm font-bold bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-100 min-w-[200px]" value={selectedExam} onChange={e => setSelectedExam(e.target.value)}>
                             <option value="">-- Pilih Mapel / Ujian --</option>
-                            {exams.map(e => <option key={e.id} value={e.id}>{e.nama_ujian}</option>)}
+                            {subjectsDb.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                         </select>
                         {isConfigComplete && rows.length > 0 && (
                             <button onClick={handlePrint} className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 active:scale-95">

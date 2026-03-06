@@ -219,6 +219,11 @@ function App() {
 
   const handleStartExam = async () => {
     if (!currentUser) return;
+    
+    const selectedExam = examList.find(e => e.id === selectedExamId);
+    if (!selectedExam) return;
+    const examName = selectedExam.nama_ujian;
+
     setLoading(true);
     setLoadingMessage('Mengunduh Soal...');
     try {
@@ -236,12 +241,14 @@ function App() {
             if (inputToken.toUpperCase() !== serverToken.toUpperCase()) { 
                 setErrorMsg('Token Invalid!'); setShowConfirmModal(false); setLoading(false); return; 
             }
-            const res = await api.startExam(currentUser.username, currentUser.nama_lengkap, selectedExamId);
+            // Use examName for API
+            const res = await api.startExam(currentUser.username, currentUser.nama_lengkap, examName);
             activeStartTime = res.startTime || Date.now();
             localStorage.setItem(storageKeyTime, activeStartTime.toString());
         }
         
-        let qData = await api.getQuestions(selectedExamId);
+        // Use examName for API
+        let qData = await api.getQuestions(examName);
         
         // --- NEW: FILTER BY TP IF ASSIGNED ---
         if (currentUser.active_tp && currentUser.active_tp !== '-' && currentUser.active_tp !== '') {
@@ -277,6 +284,11 @@ function App() {
 
   const handleFinishExam = async (answers: any, displayedQuestionCount: number, questionIds: string[], isTimeout: boolean = false) => {
     if (!currentUser || !selectedExamId) return;
+    
+    const selectedExam = examList.find(e => e.id === selectedExamId);
+    if (!selectedExam) return;
+    const examName = selectedExam.nama_ujian;
+
     setLoading(true);
     setLoadingMessage(isTimeout ? 'Waktu Habis. Menyimpan...' : 'Mengunggah Jawaban...');
     try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
@@ -290,7 +302,7 @@ function App() {
 
         await api.submitExam({
             user: currentUser,
-            subject: selectedExamId,
+            subject: examName, // Use examName
             answers,
             startTime,
             displayedQuestionCount,
