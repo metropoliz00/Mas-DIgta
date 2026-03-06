@@ -47,6 +47,10 @@ export const api = {
         } else {
             console.log("Available usernames in DB:", allUsers ? allUsers.map(u => u.username) : "Empty list");
         }
+
+        // Debug: Check if other tables are accessible
+        const { data: exams, error: examsError } = await supabase.from('exams').select('id');
+        console.log("Exams table accessible:", !examsError, "Count:", exams?.length);
         
         return { user: null, error: "Username atau password salah." };
     }
