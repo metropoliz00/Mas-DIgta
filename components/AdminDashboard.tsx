@@ -53,6 +53,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, onSwitc
   
   const handleTabChange = (tab: TabType) => { setActiveTab(tab); localStorage.setItem('cbt_admin_tab', tab); setIsSidebarOpen(false); };
   
+  // Update Document Title based on Active Tab
+  useEffect(() => {
+      const tabNames: Record<TabType, string> = {
+          'overview': 'Dashboard',
+          'status_tes': 'Live Status',
+          'rilis_token': 'Token & Timer',
+          'kelompok_tes': 'Set Ujian Aktif',
+          'atur_sesi': 'Atur Sesi',
+          'atur_gelombang': 'Atur Gelombang',
+          'data_user': 'Data Siswa',
+          'data_admin': 'Data Admin & Guru',
+          'tujuan_pembelajaran': 'Tujuan Pembelajaran',
+          'bank_soal': 'Bank Soal',
+          'rekap': 'Rekap Nilai',
+          'analisis': 'Analisis Soal',
+          'ranking': 'Peringkat',
+          'konfigurasi': 'Konfigurasi',
+          'cetak_kartu': 'Kartu Peserta',
+          'cetak_absensi': 'Absensi'
+      };
+      
+      const menuName = tabNames[activeTab] || 'Admin Panel';
+      document.title = `${menuName} | MAS DIGTA`;
+  }, [activeTab]);
+  
   const fetchData = async () => {
     setIsRefreshing(true);
     try {

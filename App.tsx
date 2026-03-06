@@ -369,7 +369,7 @@ function App() {
                             MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-white">DIGTA</span>
                         </h1>
                         <p className="text-indigo-200 text-sm font-normal tracking-wide mt-2 inline-block whitespace-nowrap">
-                            Management Assessment Sumatif Digital
+                            Management Assessment Based Digital
                         </p>
                         <p className="text-indigo-100/80 text-sm mt-6 font-light leading-relaxed max-w-md">Platform Assesment Berbasis Digital yang aman, transparan, dan terintegrasi untuk mengukur perkembangan kemampuan akademik secara akurat.</p>
                     </div>
@@ -406,7 +406,7 @@ function App() {
                                 MAS <span className="text-indigo-600">DIGTA</span>
                             </h2>
                             <p className="text-xs font-normal text-slate-400 whitespace-nowrap mb-8 lg:hidden text-center">
-                                Management Assessment Sumatif Digital
+                                Management Assessment Based Digital
                             </p>
                             
                             <h3 className="text-2xl font-bold text-slate-800 mb-2">Selamat Datang</h3>

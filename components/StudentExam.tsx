@@ -257,7 +257,7 @@ const StudentExam: React.FC<StudentExamProps> = ({ exam, questions, userFullName
                       MAS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">DIGTA</span>
                   </h1>
                   <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                      Management Assessment Sumatif Digital
+                      Management Assessment Based Digital
                   </p>
               </div>
           </div>
