@@ -36,6 +36,16 @@ export const api = {
     
     if (!userData || userData.length === 0) {
         console.log("No user found with username:", username);
+        
+        // Debug: Fetch all usernames to check for typos/case issues
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('users')
+          .select('username');
+          
+        if (allUsers) {
+            console.log("Available usernames in DB:", allUsers.map(u => u.username));
+        }
+        
         return { user: null, error: "Username atau password salah." };
     }
     
