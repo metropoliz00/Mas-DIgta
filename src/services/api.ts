@@ -26,34 +26,34 @@ export const api = {
       .from('users')
       .select('*')
       .eq('username', username)
-      .eq('password', password)
-      .single();
+      .eq('password', password);
 
     if (error) {
         console.error("Supabase login error:", error);
         return { user: null, error: error.message };
     }
     
-    if (!data) {
+    if (!data || data.length === 0) {
         console.log("No user found with provided credentials.");
         return { user: null, error: "Username atau password salah." };
     }
-
-    console.log("Login successful for:", data.username);
+    
+    const dataRow = data[0];
+    console.log("Login successful for:", dataRow.username);
     const user: User = {
-        id: data.username,
-        username: data.username,
-        role: data.role,
-        nama_lengkap: data.fullname,
-        jenis_kelamin: data.gender, 
-        kelas: data.kelas,
-        kelas_id: data.school, 
-        kecamatan: data.kecamatan, 
-        active_exam: data.active_exam, 
-        session: data.session,
-        photo_url: formatGoogleDriveUrl(data.photo_url),
-        active_tp: data.active_tp || '',
-        exam_type: data.exam_type || ''
+        id: dataRow.username,
+        username: dataRow.username,
+        role: dataRow.role,
+        nama_lengkap: dataRow.fullname,
+        jenis_kelamin: dataRow.gender, 
+        kelas: dataRow.kelas,
+        kelas_id: dataRow.school, 
+        kecamatan: dataRow.kecamatan, 
+        active_exam: dataRow.active_exam, 
+        session: dataRow.session,
+        photo_url: formatGoogleDriveUrl(dataRow.photo_url),
+        active_tp: dataRow.active_tp || '',
+        exam_type: dataRow.exam_type || ''
     };
     return { user, error: undefined };
   },
@@ -70,9 +70,8 @@ export const api = {
       const { data, error } = await supabase
         .from('users')
         .select('status')
-        .eq('username', username)
-        .single();
-      return data?.status || 'OFFLINE';
+        .eq('username', username);
+      return data && data.length > 0 ? data[0].status : 'OFFLINE';
   },
 
   getExams: async (): Promise<Exam[]> => {
@@ -93,9 +92,8 @@ export const api = {
       const { data, error } = await supabase
         .from('app_config')
         .select('value')
-        .eq('key', 'TOKEN')
-        .single();
-      return data?.value || '';
+        .eq('key', 'TOKEN');
+      return data && data.length > 0 ? data[0].value : '';
   },
 
   saveToken: async (newToken: string): Promise<{success: boolean}> => {
@@ -308,12 +306,13 @@ export const api = {
           exam_id: payload.subject,
           status: 'completed',
           waktu_submit: new Date().toISOString()
-      }]).select().single();
+      }]).select();
       
-      if (error) return { success: false };
+      if (error || !data || data.length === 0) return { success: false };
+      const studentExam = data[0];
       
       const answers = Object.entries(payload.answers).map(([question_id, option_id]) => ({
-          student_exam_id: data.id,
+          student_exam_id: studentExam.id,
           question_id,
           option_id
       }));
