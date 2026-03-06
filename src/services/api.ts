@@ -188,6 +188,7 @@ export const api = {
         kelas: q.kelas, 
         tp_id: q.tp_id, 
         caption: q.caption,
+        jenis_ujian: q.jenis_ujian,
         options: q.options.map((o: any) => ({
             id: o.id,
             question_id: o.question_id,
