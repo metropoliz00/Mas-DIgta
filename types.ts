@@ -44,6 +44,7 @@ export interface Question {
   bobot_nilai: number;
   kelas?: string; 
   tp_id?: string; 
+  jenis_ujian?: string; // NEW: Filter Jenis Ujian
 }
 
 // Interface for Admin CRUD
@@ -61,6 +62,7 @@ export interface QuestionRow {
   bobot: number;
   kelas?: string; 
   tp_id?: string; 
+  jenis_ujian?: string; // NEW: Filter Jenis Ujian
 }
 
 // 4. Tabel Options (Pilihan Jawaban)

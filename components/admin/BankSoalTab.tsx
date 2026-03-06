@@ -4,10 +4,11 @@ import { FileQuestion, Download, Upload, Loader2, Plus, Edit, Trash2, X, Save, I
 import { api } from '../../src/services/api';
 import { QuestionRow, LearningObjective } from '../../types';
 import * as XLSX from 'xlsx';
-import { exportToExcel, getSubjects } from '../../utils/adminHelpers';
+import { exportToExcel, getSubjects, getExamTypes } from '../../utils/adminHelpers';
 
 const BankSoalTab = () => {
     const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
+    const [examTypes, setExamTypes] = useState<{id: string, label: string}[]>([]); // Store Exam Types
     const [selectedSubject, setSelectedSubject] = useState('');
     const [questions, setQuestions] = useState<QuestionRow[]>([]);
     const [tps, setTps] = useState<LearningObjective[]>([]); // Store all TPs
@@ -19,12 +20,15 @@ const BankSoalTab = () => {
     // Filters
     const [filterKelas, setFilterKelas] = useState('all');
     const [filterTp, setFilterTp] = useState('all');
+    const [filterJenisUjian, setFilterJenisUjian] = useState('all'); // New Filter
 
     useEffect(() => {
         const loadInitial = async () => {
             const config = await api.getAppConfig();
             const subjects = getSubjects(config);
+            const types = getExamTypes(config);
             setSubjectsDb(subjects);
+            setExamTypes(types);
             if (subjects.length > 0) {
                 setSelectedSubject(subjects[0].label);
             }
@@ -52,7 +56,7 @@ const BankSoalTab = () => {
     // Reset TP filter when Subject or Class filter changes
     useEffect(() => {
         setFilterTp('all');
-    }, [selectedSubject, filterKelas]);
+    }, [selectedSubject, filterKelas, filterJenisUjian]);
 
     // Filtered & Sorted Questions List
     const filteredQuestions = useMemo(() => {
@@ -68,11 +72,16 @@ const BankSoalTab = () => {
             res = res.filter(q => q.tp_id === filterTp);
         }
 
+        // Filter Jenis Ujian
+        if (filterJenisUjian !== 'all') {
+            res = res.filter(q => q.jenis_ujian === filterJenisUjian);
+        }
+
         // Default ID Sort (Numeric aware for Q1, Q2, Q10)
         return [...res].sort((a, b) => {
             return a.id.localeCompare(b.id, undefined, { numeric: true });
         });
-    }, [questions, filterKelas, filterTp]);
+    }, [questions, filterKelas, filterTp, filterJenisUjian]);
 
     // Available Classes derived from questions
     const uniqueClasses = useMemo(() => {
@@ -119,7 +128,8 @@ const BankSoalTab = () => {
             kunci_jawaban: '',
             bobot: 10,
             kelas: '',
-            tp_id: ''
+            tp_id: '',
+            jenis_ujian: '' // Init Jenis Ujian
         });
         setModalOpen(true);
     };
@@ -178,7 +188,8 @@ const BankSoalTab = () => {
                         bobot: Number(row[9] || 10),
                         kelas: String(row[10] || ""),
                         tp_id: String(row[11] || ""),
-                        caption: String(row[12] || "") // Column 13 for Caption
+                        caption: String(row[12] || ""), // Column 13 for Caption
+                        jenis_ujian: String(row[13] || "") // Column 14 for Jenis Ujian
                     });
                 }
 
@@ -273,7 +284,7 @@ const BankSoalTab = () => {
 
     const downloadTemplate = () => {
         const rows = [
-            { "ID Soal": "Q1", "Teks Soal": "Contoh Soal...", "Tipe Soal (PG/PGK/BS)": "PG", "Link Gambar": "", "Opsi A": "A", "Opsi B": "B", "Opsi C": "C", "Opsi D": "D", "Kunci Jawaban": "A", "Bobot": 10, "Kelas": "1", "ID TP": "TP-01", "Caption (Keterangan Gambar)": "Deskripsi gambar..." }
+            { "ID Soal": "Q1", "Teks Soal": "Contoh Soal...", "Tipe Soal (PG/PGK/BS)": "PG", "Link Gambar": "", "Opsi A": "A", "Opsi B": "B", "Opsi C": "C", "Opsi D": "D", "Kunci Jawaban": "A", "Bobot": 10, "Kelas": "1", "ID TP": "TP-01", "Caption (Keterangan Gambar)": "Deskripsi gambar...", "Jenis Ujian": "SUMATIF" }
         ];
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
@@ -321,6 +332,16 @@ const BankSoalTab = () => {
                                         {tp.id}
                                     </option>
                                 ))}
+                            </select>
+
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-0 sm:ml-2">Jenis Ujian:</span>
+                            <select 
+                                className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1 outline-none cursor-pointer"
+                                value={filterJenisUjian}
+                                onChange={e => setFilterJenisUjian(e.target.value)}
+                            >
+                                <option value="all">Semua</option>
+                                {examTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                             </select>
                         </div>
                     </div>
@@ -427,6 +448,7 @@ const BankSoalTab = () => {
                                         <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Kunci: {q.kunci_jawaban}</span>
                                         {q.kelas && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Kelas: {q.kelas}</span>}
                                         {q.tp_id && <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 flex items-center gap-1"><Target size={10}/> {q.tp_id}</span>}
+                                        {q.jenis_ujian && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100">{q.jenis_ujian}</span>}
                                         {q.gambar && <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><ImageIcon size={10}/> Gambar</span>}
                                         {q.caption && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate max-w-[150px]">Ket: {q.caption}</span>}
                                     </div>
@@ -487,6 +509,17 @@ const BankSoalTab = () => {
                                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Kelas</label>
                                             <input type="text" className="w-full font-bold text-slate-700 text-sm outline-none bg-transparent" value={currentQ.kelas || ''} onChange={e => setCurrentQ({...currentQ, kelas: e.target.value})} placeholder="-" />
                                         </div>
+                                    </div>
+
+                                    {/* Jenis Ujian Selector */}
+                                    <div className="bg-white p-3 rounded-xl border border-slate-200">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Jenis Ujian</label>
+                                        <select className="w-full font-bold text-slate-700 text-sm outline-none bg-transparent cursor-pointer" value={currentQ.jenis_ujian || ''} onChange={e => setCurrentQ({...currentQ, jenis_ujian: e.target.value})}>
+                                            <option value="">-- Pilih Jenis Ujian --</option>
+                                            {examTypes.map(t => (
+                                                <option key={t.id} value={t.id}>{t.label}</option>
+                                            ))}
+                                        </select>
                                     </div>
 
                                     {/* TP Selector */}
