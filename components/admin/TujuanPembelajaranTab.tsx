@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Target, Plus, Download, Upload, Search, Edit, Trash2, Loader2, X, Save, FileText, BookOpen, Wand2 } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { LearningObjective } from '../../types';
@@ -7,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { exportToExcel, getSubjects } from '../../utils/adminHelpers';
 
 const TujuanPembelajaranTab = () => {
+    const { showToast } = useToast();
     const [subjectsDb, setSubjectsDb] = useState<{id: string, label: string}[]>([]);
     const [objectives, setObjectives] = useState<LearningObjective[]>([]);
     const [loading, setLoading] = useState(false);
@@ -76,7 +78,7 @@ const TujuanPembelajaranTab = () => {
 
     const generateId = () => {
         if (!formData.mapel || !formData.kelas) {
-            alert("Pilih Mapel dan Kelas terlebih dahulu untuk generate ID.");
+            showToast("Pilih Mapel dan Kelas terlebih dahulu untuk generate ID.", "warning");
             return;
         }
         
@@ -101,7 +103,7 @@ const TujuanPembelajaranTab = () => {
             await api.deleteLearningObjective(id);
         } catch(e) { 
             console.error(e);
-            alert("Gagal menghapus data dari database.");
+            showToast("Gagal menghapus data dari database.", "error");
             setObjectives(original); // Revert on error
         } 
     };
@@ -113,7 +115,7 @@ const TujuanPembelajaranTab = () => {
             await api.saveLearningObjective(formData);
             await loadData();
             setIsModalOpen(false);
-        } catch(e) { alert("Gagal menyimpan."); } 
+        } catch(e) { showToast("Gagal menyimpan.", "error"); } 
         finally { setIsSaving(false); }
     };
 
@@ -211,12 +213,12 @@ const TujuanPembelajaranTab = () => {
                 
                 if (parsed.length > 0) {
                     await api.importLearningObjectives(parsed);
-                    alert(`Berhasil impor ${parsed.length} data.`);
+                    showToast(`Berhasil impor ${parsed.length} data.`, "success");
                     await loadData();
                 } else {
-                    alert("Data kosong atau format salah.");
+                    showToast("Data kosong atau format salah.", "warning");
                 }
-            } catch(e) { console.error(e); alert("Gagal membaca file."); } 
+            } catch(e) { console.error(e); showToast("Gagal membaca file.", "error"); } 
             finally { setImporting(false); if(e.target) e.target.value = ''; }
         };
         reader.readAsBinaryString(file);

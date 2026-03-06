@@ -47,7 +47,13 @@ export const getExamTypes = (config: Record<string, string>) => {
     if (config['EXAM_TYPES_DB']) {
         try {
             const parsed = JSON.parse(config['EXAM_TYPES_DB']);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                // Normalize string[] to {id, label}[]
+                if (typeof parsed[0] === 'string') {
+                    return parsed.map((p: string) => ({ id: p, label: p }));
+                }
+                return parsed;
+            }
         } catch (e) {
             console.error("Failed to parse EXAM_TYPES_DB", e);
         }

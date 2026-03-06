@@ -292,8 +292,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, onSwitc
                         <DaftarPesertaTab currentUser={currentUserState} onDataChange={fetchData} mode="staff" onSwitchUser={onSwitchUser} />
                     )}
 
-                    {activeTab === 'atur_gelombang' && currentUserState.role === 'admin' && <AturGelombangTab students={dashboardData.allUsers || []} />}
-                    {activeTab === 'rilis_token' && <RilisTokenTab currentUser={currentUserState} token={dashboardData.token} duration={dashboardData.duration} maxQuestions={dashboardData.maxQuestions} kktp={dashboardData.kktp} surveyDuration={0} refreshData={fetchData} isRefreshing={isRefreshing} />}
+                    {activeTab === 'atur_gelombang' && currentUserState.role === 'admin' && <AturGelombangTab />}
+                    {activeTab === 'rilis_token' && <RilisTokenTab currentUser={currentUserState} token={dashboardData.token} duration={dashboardData.duration} maxQuestions={dashboardData.maxQuestions} kktp={dashboardData.kktp} surveyDuration={0} refreshData={fetchData} isRefreshing={isRefreshing} schedules={dashboardData.schedules || []} />}
                     {activeTab === 'bank_soal' && currentUserState.role === 'admin' && <BankSoalTab />}
                     {activeTab === 'tujuan_pembelajaran' && currentUserState.role === 'admin' && <TujuanPembelajaranTab />}
                     

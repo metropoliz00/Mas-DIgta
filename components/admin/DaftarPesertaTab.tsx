@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Users, FileText, Download, Upload, Loader2, Plus, Search, Edit, Trash2, X, Camera, Save, User as UserIcon, Check, Wand2, UserCog, Database, LogIn, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User } from '../../types';
@@ -14,6 +15,7 @@ interface DaftarPesertaTabProps {
 }
 
 const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchUser }: DaftarPesertaTabProps) => {
+    const { showToast } = useToast();
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -59,13 +61,13 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
         try { 
             const res = await api.deleteUser(username); 
             if (res.success) {
-                alert("User berhasil dihapus.");
+                showToast("User berhasil dihapus.", "success");
                 setUsers(prev => prev.filter(u => u.username !== username)); 
                 onDataChange(); 
             } else {
-                alert("Gagal menghapus user. User tidak ditemukan.");
+                showToast("Gagal menghapus user. User tidak ditemukan.", "error");
             }
-        } catch (e) { console.error(e); alert("Terjadi kesalahan saat menghapus user."); } 
+        } catch (e) { console.error(e); showToast("Terjadi kesalahan saat menghapus user.", "error"); } 
         finally { setLoading(false); } 
     };
     
@@ -154,7 +156,7 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
             onDataChange(); 
         } catch (e) { 
             console.error(e); 
-            alert("Gagal menyimpan data."); 
+            showToast("Gagal menyimpan data.", "error"); 
         } finally { 
             setIsSaving(false); 
         } 
@@ -243,15 +245,15 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
                 
                 if (parsedUsers.length > 0) { 
                     await api.importUsers(parsedUsers); 
-                    alert(`Berhasil mengimpor ${parsedUsers.length} data ke database.`); 
+                    showToast(`Berhasil mengimpor ${parsedUsers.length} data ke database.`, "success"); 
                     await loadUsers(); 
                     onDataChange(); 
                 } else { 
-                    alert(`Data tidak ditemukan. Pastikan format Excel sesuai Template.`); 
+                    showToast(`Data tidak ditemukan. Pastikan format Excel sesuai Template.`, "warning"); 
                 } 
             } catch (err) { 
                 console.error(err); 
-                alert("Gagal membaca file Excel."); 
+                showToast("Gagal membaca file Excel.", "error"); 
             } finally { 
                 setIsImporting(false); 
                 if (e.target) e.target.value = ''; 
@@ -284,7 +286,7 @@ const DaftarPesertaTab = ({ currentUser, onDataChange, mode = 'siswa', onSwitchU
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 2 * 1024 * 1024) { alert("Max 2MB"); return; }
+            if (file.size > 2 * 1024 * 1024) { showToast("Ukuran file maksimal 2MB", "warning"); return; }
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();

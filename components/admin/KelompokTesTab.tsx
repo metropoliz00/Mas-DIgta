@@ -1,11 +1,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Group, Search, Save, Loader2, Filter, Target, ListChecks, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User, Exam, LearningObjective } from '../../types';
 import { getSubjects, getExamTypes, getExamSubjectMapping } from '../../utils/adminHelpers';
 
 const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: User, students: any[], refreshData: () => void }) => {
+    const { showToast } = useToast();
     const [exams, setExams] = useState<Exam[]>([]);
     const [selectedExam, setSelectedExam] = useState('');
     
@@ -90,6 +92,18 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
         });
     }, [exams, selectedExamType, examSubjectMapping, subjectsDb]);
 
+    const filteredTps = useMemo(() => {
+        if (!selectedExam) return [];
+        const exam = exams.find(e => e.id === selectedExam);
+        if (!exam) return [];
+        
+        const examNameLower = exam.nama_ujian.toLowerCase();
+        
+        return tps.filter(tp => {
+            return examNameLower.includes((tp.mapel || '').toLowerCase());
+        });
+    }, [selectedExam, exams, tps]);
+
     // Reset selected TP when exam changes
     useEffect(() => {
         setSelectedTp('');
@@ -121,8 +135,8 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
     }, [studentList, searchTerm, currentUser, filterSchool, filterKecamatan, filterClass, sortOrder]);
 
     const handleSave = async () => {
-        if (!selectedExam) return alert("Pilih ujian terlebih dahulu");
-        if (selectedUsers.size === 0) return alert("Pilih siswa");
+        if (!selectedExam) return showToast("Pilih ujian terlebih dahulu", "info");
+        if (selectedUsers.size === 0) return showToast("Pilih siswa", "info");
         
         setLoading(true);
         try {
@@ -134,10 +148,10 @@ const KelompokTesTab = ({ currentUser, students, refreshData }: { currentUser: U
                 selectedTp,
                 selectedExamType
             );
-            alert("Berhasil set ujian aktif, TP, dan jenis ujian.");
+            showToast("Berhasil set ujian aktif, TP, dan jenis ujian.", "success");
             refreshData();
             setSelectedUsers(new Set());
-        } catch(e) { console.error(e); alert("Gagal."); }
+        } catch(e) { console.error(e); showToast("Gagal.", "error"); }
         setLoading(false);
     };
 

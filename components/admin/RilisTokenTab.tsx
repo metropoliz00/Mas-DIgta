@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Key, RefreshCw, Save, X, Edit, Clock, Layers, ShieldCheck, Copy, Award } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { Key, RefreshCw, Save, X, Edit, Clock, Layers, ShieldCheck, Copy, Award, Calendar } from 'lucide-react';
 import { api } from '../../src/services/api';
-import { User } from '../../types';
+import { User, SchoolSchedule } from '../../types';
 
-const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surveyDuration, refreshData, isRefreshing }: { currentUser: User, token: string, duration: number, maxQuestions: number, kktp: number, surveyDuration: number, refreshData: () => void, isRefreshing: boolean }) => {
+const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surveyDuration, refreshData, isRefreshing, schedules }: { currentUser: User, token: string, duration: number, maxQuestions: number, kktp: number, surveyDuration: number, refreshData: () => void, isRefreshing: boolean, schedules: SchoolSchedule[] }) => {
+    const { showToast } = useToast();
     const [localMaxQ, setLocalMaxQ] = useState(maxQuestions);
     const [localKKTP, setLocalKKTP] = useState(kktp || 75);
     const [isSavingQ, setIsSavingQ] = useState(false);
@@ -24,17 +26,17 @@ const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surve
 
     const handleSaveMaxQ = async () => {
         setIsSavingQ(true);
-        try { await api.saveMaxQuestions(Number(localMaxQ)); refreshData(); alert("Konfigurasi tersimpan."); } catch (e) { console.error(e); alert("Gagal menyimpan."); } finally { setIsSavingQ(false); }
+        try { await api.saveMaxQuestions(Number(localMaxQ)); refreshData(); showToast("Konfigurasi tersimpan.", "success"); } catch (e) { console.error(e); showToast("Gagal menyimpan.", "error"); } finally { setIsSavingQ(false); }
     };
 
     const handleSaveKKTP = async () => {
         setIsSavingQ(true);
-        try { await api.saveKKTP(Number(localKKTP)); refreshData(); alert("KKTP tersimpan."); } catch (e) { console.error(e); alert("Gagal menyimpan KKTP."); } finally { setIsSavingQ(false); }
+        try { await api.saveKKTP(Number(localKKTP)); refreshData(); showToast("KKTP tersimpan.", "success"); } catch (e) { console.error(e); showToast("Gagal menyimpan KKTP.", "error"); } finally { setIsSavingQ(false); }
     };
 
     const handleUpdateToken = async () => {
         setIsSavingQ(true);
-        try { await api.saveToken(tokenInput); setIsEditingToken(false); refreshData(); alert("Token berhasil diperbarui."); } catch (e) { alert("Gagal menyimpan token."); } finally { setIsSavingQ(false); }
+        try { await api.saveToken(tokenInput); setIsEditingToken(false); refreshData(); showToast("Token berhasil diperbarui.", "success"); } catch (e) { showToast("Gagal menyimpan token.", "error"); } finally { setIsSavingQ(false); }
     };
 
     const generateToken = () => {
@@ -48,7 +50,7 @@ const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surve
 
     const handleUpdateDuration = async () => {
         setIsSavingQ(true);
-        try { await api.saveDuration(durationInput); setIsEditingDuration(false); refreshData(); alert("Durasi ujian disimpan."); } catch (e) { alert("Gagal menyimpan durasi."); } finally { setIsSavingQ(false); }
+        try { await api.saveDuration(durationInput); setIsEditingDuration(false); refreshData(); showToast("Durasi ujian disimpan.", "success"); } catch (e) { showToast("Gagal menyimpan durasi.", "error"); } finally { setIsSavingQ(false); }
     };
 
     return (
@@ -90,7 +92,7 @@ const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surve
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-center py-4 cursor-pointer group/token select-none" onClick={() => { navigator.clipboard.writeText(token); alert('Token disalin!'); }} title="Klik untuk salin">
+                            <div className="text-center py-4 cursor-pointer group/token select-none" onClick={() => { navigator.clipboard.writeText(token); showToast('Token disalin!', 'success'); }} title="Klik untuk salin">
                                 <h3 className="text-6xl md:text-7xl font-mono font-black tracking-[0.2em] text-slate-800 group-hover/token:text-indigo-600 transition-colors">{token}</h3>
                                 <div className="flex justify-center mt-4 opacity-0 group-hover/token:opacity-100 transition-all transform translate-y-2 group-hover/token:translate-y-0">
                                     <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-4 py-1.5 rounded-full flex items-center gap-1.5"><Copy size={10}/> Salin Token</span>
@@ -169,6 +171,44 @@ const RilisTokenTab = ({ currentUser, token, duration, maxQuestions, kktp, surve
                 </div>
             </div>
             )}
+
+            {/* New Section: Jadwal Ujian */}
+            <div className="w-full max-w-4xl bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600"><Calendar size={20}/></div>
+                    <div>
+                        <h4 className="font-bold text-slate-700 text-sm">Jadwal Ujian Aktif</h4>
+                        <p className="text-[10px] text-slate-400 font-medium">Informasi gelombang dan sesi ujian.</p>
+                    </div>
+                </div>
+                
+                <div className="overflow-hidden rounded-xl border border-slate-100">
+                    <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                            <tr>
+                                <th className="p-3 border-b border-slate-100">Sekolah</th>
+                                <th className="p-3 border-b border-slate-100 text-center">Gelombang</th>
+                                <th className="p-3 border-b border-slate-100 text-center">Mulai</th>
+                                <th className="p-3 border-b border-slate-100 text-center">Selesai</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {(!schedules || schedules.length === 0) ? (
+                                <tr><td colSpan={4} className="p-6 text-center text-slate-400 italic bg-slate-50/50">Belum ada jadwal diatur.</td></tr>
+                            ) : (
+                                schedules.map((s, i) => (
+                                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                        <td className="p-3 font-bold text-slate-700">{s.school}</td>
+                                        <td className="p-3 text-center text-slate-600 font-mono bg-slate-50/50">{s.gelombang}</td>
+                                        <td className="p-3 text-center text-slate-600">{s.tanggal}</td>
+                                        <td className="p-3 text-center text-slate-600">{s.tanggal_selesai || '-'}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <button onClick={refreshData} disabled={isRefreshing} className={`bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 px-8 py-3 rounded-full font-bold text-xs transition-all shadow-sm hover:shadow-md flex items-center gap-2 ${isRefreshing ? 'opacity-50 cursor-wait' : ''}`}>
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />

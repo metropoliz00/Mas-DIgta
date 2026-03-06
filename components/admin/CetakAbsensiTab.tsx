@@ -1,10 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Printer, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User, Exam } from '../../types';
 
 const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, students: any[] }) => {
+    const { showToast } = useToast();
     const [exams, setExams] = useState<Exam[]>([]);
     const [selectedExamId, setSelectedExamId] = useState('');
     const [selectedSession, setSelectedSession] = useState('');
@@ -65,10 +67,10 @@ const CetakAbsensiTab = ({ currentUser, students }: { currentUser: User, student
     }, [studentList, currentUser, filterSchool, filterKecamatan, filterClass, selectedSession, sortOrder]);
 
     const handlePrint = () => {
-        if (filteredStudents.length === 0) return alert("Tidak ada data siswa untuk dicetak.");
+        if (filteredStudents.length === 0) return showToast("Tidak ada data siswa untuk dicetak.", "info");
 
         const printWindow = window.open('', '_blank');
-        if (!printWindow) return alert("Pop-up blocked. Please allow pop-ups.");
+        if (!printWindow) return showToast("Pop-up diblokir. Mohon izinkan pop-up.", "warning");
 
         const schoolName = currentUser.role === 'Guru' ? currentUser.kelas_id : (filterSchool !== 'all' ? filterSchool : 'Semua Sekolah');
         const kecamatanName = currentUser.role === 'Guru' ? (currentUser.kecamatan || '-') : (filterKecamatan !== 'all' ? filterKecamatan : '-');

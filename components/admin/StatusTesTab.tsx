@@ -1,10 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Monitor, Search, PlayCircle, Key, CheckCircle2, RefreshCw, Filter, UserX, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User } from '../../types';
 
 const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: User, students: any[], refreshData: () => void }) => {
+    const { showToast } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterSchool, setFilterSchool] = useState('all');
     const [filterKecamatan, setFilterKecamatan] = useState('all');
@@ -74,7 +76,7 @@ const StatusTesTab = ({ currentUser, students, refreshData }: { currentUser: Use
             refreshData(); 
         } catch(e) { 
             console.error(e); 
-            alert("Gagal reset login."); 
+            showToast("Gagal reset login.", "error");
         } finally { 
             setResetting(null); 
         } 

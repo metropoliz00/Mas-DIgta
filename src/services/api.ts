@@ -350,7 +350,20 @@ export const api = {
   getDashboardData: async () => {
       const { data: users, error: uErr } = await supabase.from('users').select('*');
       const { data: exams, error: eErr } = await supabase.from('exams').select('*');
-      return { allUsers: users || [], allExams: exams || [] };
+      const { data: schedules, error: sErr } = await supabase.from('school_schedules').select('*');
+      const { data: configData, error: cErr } = await supabase.from('app_config').select('key, value');
+      
+      const config = configData ? configData.reduce((acc: any, curr: any) => { acc[curr.key] = curr.value; return acc; }, {}) : {};
+
+      return { 
+          allUsers: users || [], 
+          allExams: exams || [],
+          schedules: schedules || [],
+          token: config['TOKEN'] || 'TOKEN',
+          duration: parseInt(config['DURATION'] || '60'),
+          maxQuestions: parseInt(config['MAX_QUESTIONS'] || '0'),
+          kktp: parseInt(config['KKTP'] || '75')
+      };
   },
 
   getSurveyQuestions: async (surveyType: string): Promise<QuestionWithOptions[]> => {

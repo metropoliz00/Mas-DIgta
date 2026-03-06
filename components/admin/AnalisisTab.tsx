@@ -1,10 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { BarChart3, FileText, Loader2, Filter, AlertCircle, Printer, Settings, Target, ArrowDownAZ, ArrowUpZA } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { Exam, User, LearningObjective } from '../../types';
 
 const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: any[] }) => {
+    const { showToast } = useToast();
     const [exams, setExams] = useState<Exam[]>([]);
     const [tps, setTps] = useState<LearningObjective[]>([]);
     const [selectedExam, setSelectedExam] = useState('');
@@ -415,7 +417,7 @@ const AnalisisTab = ({ currentUser, students }: { currentUser: User, students: a
     };
 
     const handlePrint = () => {
-        if (!isConfigComplete || rows.length === 0) return alert("Data belum lengkap atau kosong.");
+        if (!isConfigComplete || rows.length === 0) return showToast("Data belum lengkap atau kosong.", "info");
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
         const content = generateHtmlReport();

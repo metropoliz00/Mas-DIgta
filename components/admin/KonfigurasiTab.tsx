@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Save, Loader2, Building, UserSquare, Calendar, Shield, School, UserCircle, Briefcase, Lock, Upload, Image as ImageIcon, AlertCircle, Plus, Trash2, ListChecks, BookOpen } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { User } from '../../types';
 import { getSubjects, getExamTypes, getExamSubjectMapping } from '../../utils/adminHelpers';
 
 const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
+    const { showToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     
@@ -23,11 +25,11 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
         logoSekolah: '',
         examTypes: [] as { id: string, label: string }[],
         examSignatories: {} as Record<string, { leftTitle: string, leftName: string, leftNip: string, rightTitle: string, rightName: string, rightNip: string }>,
-        examSubjectMapping: [] as { examTypeId: string, subjectIds: string[] }[],
+        examSubjects: {} as Record<string, string[]>,
         subjectsDb: [] as { id: string, label: string }[]
     });
 
-    const [newExamType, setNewExamType] = useState({ id: '', label: '' });
+    const [newExamType, setNewExamType] = useState('');
     const [newSubjectId, setNewSubjectId] = useState('');
     const [newSubjectLabel, setNewSubjectLabel] = useState('');
 
@@ -63,6 +65,9 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                     }
                 }
 
+                const mapping = getExamSubjectMapping(globalConfig);
+                const subjectsRecord = mapping.reduce((acc: any, curr: any) => { acc[curr.examTypeId] = curr.subjectIds; return acc; }, {});
+
                 setFormData({
                     schoolName: mergedConfig['SCHOOL_NAME'] || '',
                     principalName: mergedConfig['PRINCIPAL_NAME'] || '',
@@ -83,7 +88,7 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                     logoSekolah: globalConfig['LOGO_SEKOLAH'] || '',
                     examTypes: getExamTypes(globalConfig),
                     examSignatories: parsedSignatories,
-                    examSubjectMapping: getExamSubjectMapping(globalConfig),
+                    examSubjects: subjectsRecord,
                     subjectsDb: getSubjects(globalConfig)
                 });
             } catch(e) {
@@ -100,7 +105,7 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
         if (isGuru) return; // Security check
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 2 * 1024 * 1024) { alert("Ukuran file maksimal 2MB"); return; }
+            if (file.size > 2 * 1024 * 1024) { showToast("Ukuran file maksimal 2MB", "error"); return; }
             
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -138,14 +143,15 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
         try {
             // 1. SAVE TO GLOBAL CONFIG (Sekolah & Logos) - Only Admin
             if (!isGuru) {
+                const mappingArray = Object.entries(formData.examSubjects).map(([key, val]) => ({ examTypeId: key, subjectIds: val }));
                 const globalPayload = {
                     'SCHOOL_NAME': formData.schoolName,
                     'LOGO_KABUPATEN': formData.logoKabupaten,
                     'LOGO_SEKOLAH': formData.logoSekolah,
                     'ACADEMIC_YEAR': formData.academicYear,
-                    'EXAM_TYPES': JSON.stringify(formData.examTypes),
+                    'EXAM_TYPES_DB': JSON.stringify(formData.examTypes),
                     'EXAM_SIGNATORIES': JSON.stringify(formData.examSignatories),
-                    'EXAM_SUBJECTS': JSON.stringify(formData.examSubjects),
+                    'EXAM_SUBJECT_MAPPING_DB': JSON.stringify(mappingArray),
                     'SUBJECTS_DB': JSON.stringify(formData.subjectsDb)
                 };
                 await api.saveBatchConfig(globalPayload);
@@ -170,10 +176,10 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
 
             await api.saveUserConfig(currentUser.username, userPayload);
             
-            alert(isGuru ? "Konfigurasi guru berhasil disimpan." : "Konfigurasi instansi berhasil disimpan.");
+            showToast(isGuru ? "Konfigurasi guru berhasil disimpan." : "Konfigurasi instansi berhasil disimpan.", "success");
         } catch(e) {
             console.error(e);
-            alert("Gagal menyimpan konfigurasi.");
+            showToast("Gagal menyimpan konfigurasi.", "error");
         } finally {
             setSaving(false);
         }
@@ -345,8 +351,8 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
-                                            if (newExamType.trim() && !formData.examTypes.includes(newExamType.trim())) {
-                                                setFormData(prev => ({...prev, examTypes: [...prev.examTypes, newExamType.trim()]}));
+                                            if (newExamType.trim() && !formData.examTypes.find(t => t.id === newExamType.trim())) {
+                                                setFormData(prev => ({...prev, examTypes: [...prev.examTypes, { id: newExamType.trim(), label: newExamType.trim() }]}));
                                                 setNewExamType('');
                                             }
                                         }
@@ -354,8 +360,8 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                                 />
                                 <button 
                                     onClick={() => {
-                                        if (newExamType.trim() && !formData.examTypes.includes(newExamType.trim())) {
-                                            setFormData(prev => ({...prev, examTypes: [...prev.examTypes, newExamType.trim()]}));
+                                        if (newExamType.trim() && !formData.examTypes.find(t => t.id === newExamType.trim())) {
+                                            setFormData(prev => ({...prev, examTypes: [...prev.examTypes, { id: newExamType.trim(), label: newExamType.trim() }]}));
                                             setNewExamType('');
                                         }
                                     }}
@@ -368,19 +374,19 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                                 <ul className="divide-y divide-slate-100">
                                     {formData.examTypes.map((type, idx) => (
-                                        <li key={idx} className="flex flex-col p-4 hover:bg-slate-50 transition">
+                                        <li key={type.id} className="flex flex-col p-4 hover:bg-slate-50 transition">
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className="font-bold text-slate-700">{type}</span>
+                                                <span className="font-bold text-slate-700">{type.label}</span>
                                                 <button 
                                                     onClick={() => {
                                                         setFormData(prev => {
                                                             const newSignatories = { ...prev.examSignatories };
-                                                            delete newSignatories[type];
+                                                            delete newSignatories[type.id];
                                                             const newExamSubjects = { ...prev.examSubjects };
-                                                            delete newExamSubjects[type];
+                                                            delete newExamSubjects[type.id];
                                                             return {
                                                                 ...prev, 
-                                                                examTypes: prev.examTypes.filter(t => t !== type),
+                                                                examTypes: prev.examTypes.filter(t => t.id !== type.id),
                                                                 examSignatories: newSignatories,
                                                                 examSubjects: newExamSubjects
                                                             };
@@ -394,36 +400,36 @@ const KonfigurasiTab = ({ currentUser }: { currentUser: User }) => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 bg-white p-4 rounded-xl border border-slate-200">
                                                 <div>
                                                     <p className="text-xs font-bold text-slate-500 mb-2">Tanda Tangan Kiri</p>
-                                                    <input type="text" placeholder="Jabatan (cth: Kepala Sekolah)" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.leftTitle || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), leftTitle: e.target.value}}}))} />
-                                                    <input type="text" placeholder="Nama Lengkap" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.leftName || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), leftName: e.target.value}}}))} />
-                                                    <input type="text" placeholder="NIP" className="w-full text-xs p-2 border border-slate-200 rounded" value={formData.examSignatories[type]?.leftNip || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), leftNip: e.target.value}}}))} />
+                                                    <input type="text" placeholder="Jabatan (cth: Kepala Sekolah)" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type.id]?.leftTitle || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type.id]: {...(prev.examSignatories[type.id] || {}), leftTitle: e.target.value}}}))} />
+                                                    <input type="text" placeholder="Nama Lengkap" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type.id]?.leftName || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type.id]: {...(prev.examSignatories[type.id] || {}), leftName: e.target.value}}}))} />
+                                                    <input type="text" placeholder="NIP" className="w-full text-xs p-2 border border-slate-200 rounded" value={formData.examSignatories[type.id]?.leftNip || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type.id]: {...(prev.examSignatories[type.id] || {}), leftNip: e.target.value}}}))} />
                                                 </div>
                                                 <div>
                                                     <p className="text-xs font-bold text-slate-500 mb-2">Tanda Tangan Kanan</p>
-                                                    <input type="text" placeholder="Jabatan (cth: Guru Kelas)" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.rightTitle || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), rightTitle: e.target.value}}}))} />
-                                                    <input type="text" placeholder="Nama Lengkap" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type]?.rightName || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), rightName: e.target.value}}}))} />
-                                                    <input type="text" placeholder="NIP" className="w-full text-xs p-2 border border-slate-200 rounded" value={formData.examSignatories[type]?.rightNip || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type]: {...(prev.examSignatories[type] || {}), rightNip: e.target.value}}}))} />
+                                                    <input type="text" placeholder="Jabatan (cth: Guru Kelas)" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type.id]?.rightTitle || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type.id]: {...(prev.examSignatories[type.id] || {}), rightTitle: e.target.value}}}))} />
+                                                    <input type="text" placeholder="Nama Lengkap" className="w-full text-xs p-2 border border-slate-200 rounded mb-2" value={formData.examSignatories[type.id]?.rightName || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type.id]: {...(prev.examSignatories[type.id] || {}), rightName: e.target.value}}}))} />
+                                                    <input type="text" placeholder="NIP" className="w-full text-xs p-2 border border-slate-200 rounded" value={formData.examSignatories[type.id]?.rightNip || ''} onChange={e => setFormData(prev => ({...prev, examSignatories: {...prev.examSignatories, [type.id]: {...(prev.examSignatories[type.id] || {}), rightNip: e.target.value}}}))} />
                                                 </div>
                                             </div>
                                             <div className="mt-4 border-t border-slate-100 pt-4">
                                                 <p className="text-xs font-bold text-slate-500 mb-2">Mata Pelajaran untuk Ujian Ini (Kosongkan jika semua mapel berlaku)</p>
                                                 <div className="flex flex-wrap gap-2">
                                                     {formData.subjectsDb.map(subj => {
-                                                        const isSelected = formData.examSubjects[type]?.includes(subj.label);
+                                                        const isSelected = formData.examSubjects[type.id]?.includes(subj.id);
                                                         return (
                                                             <button
                                                                 key={subj.id}
                                                                 onClick={() => {
                                                                     setFormData(prev => {
-                                                                        const currentSubjects = prev.examSubjects[type] || [];
+                                                                        const currentSubjects = prev.examSubjects[type.id] || [];
                                                                         const newSubjects = isSelected 
-                                                                            ? currentSubjects.filter(s => s !== subj.label)
-                                                                            : [...currentSubjects, subj.label];
+                                                                            ? currentSubjects.filter(s => s !== subj.id)
+                                                                            : [...currentSubjects, subj.id];
                                                                         return {
                                                                             ...prev,
                                                                             examSubjects: {
                                                                                 ...prev.examSubjects,
-                                                                                [type]: newSubjects
+                                                                                [type.id]: newSubjects
                                                                             }
                                                                         };
                                                                     });

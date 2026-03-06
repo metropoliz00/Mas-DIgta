@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { LayoutDashboard, FileText, Loader2, RefreshCw, Printer, Grid, List, Edit3, Save, Upload, AlertCircle } from 'lucide-react';
 import { api } from '../../src/services/api';
 import { exportToExcel, formatDurationToText, getSubjects } from '../../utils/adminHelpers';
@@ -12,6 +13,7 @@ interface RekapTabProps {
 }
 
 const RekapTab = ({ students, currentUser }: RekapTabProps) => {
+    const { showToast } = useToast();
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -288,13 +290,13 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
         setIsSaving(true);
         try {
             await api.saveExternalGrades(changes);
-            alert("Nilai berhasil disimpan.");
+            showToast("Nilai berhasil disimpan.", "success");
             setEditedCells({});
             setIsEditMode(false);
             fetchData();
         } catch (e) {
             console.error(e);
-            alert("Gagal menyimpan nilai.");
+            showToast("Gagal menyimpan nilai.", "error");
         } finally {
             setIsSaving(false);
         }
@@ -330,14 +332,14 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                 if (parsedGrades.length > 0) {
                     setLoading(true);
                     await api.saveExternalGrades(parsedGrades);
-                    alert(`Berhasil mengimpor ${parsedGrades.length} nilai.`);
+                    showToast(`Berhasil mengimpor ${parsedGrades.length} nilai.`, "success");
                     fetchData();
                 } else {
-                    alert("Data kosong.");
+                    showToast("Data kosong.", "info");
                 }
             } catch (err) {
                 console.error(err);
-                alert("Gagal membaca file Excel.");
+                showToast("Gagal membaca file Excel.", "error");
             } finally {
                 if (e.target) e.target.value = '';
                 setLoading(false);
@@ -393,7 +395,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
     };
 
     const handlePrintMatrix = () => {
-        if (matrixData.length === 0) return alert("Tidak ada data untuk dicetak.");
+        if (matrixData.length === 0) return showToast("Tidak ada data untuk dicetak.", "info");
         
         const displayMapel = filterSubject === 'all' ? 'Semua Mata Pelajaran' : filterSubject;
         const displayKelas = filterClass === 'all' ? 'Semua Kelas' : filterClass;
@@ -550,7 +552,7 @@ const RekapTab = ({ students, currentUser }: RekapTabProps) => {
                             onChange={e => setFilterSubject(e.target.value)}
                          >
                             <option value="all">-- Pilih Mata Pelajaran --</option>
-                            {SUBJECTS_DB.map((s) => (
+                            {subjectsDb.map((s) => (
                                 <option key={s.id} value={s.label}>{s.label}</option>
                             ))}
                          </select>
