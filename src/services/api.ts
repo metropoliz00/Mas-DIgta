@@ -20,7 +20,8 @@ const formatGoogleDriveUrl = (url?: string): string | undefined => {
 };
 
 export const api = {
-  login: async (username: string, password?: string): Promise<User | null> => {
+  login: async (username: string, password?: string): Promise<{user: User | null, error?: string}> => {
+    console.log("Attempting login for:", username);
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -28,12 +29,18 @@ export const api = {
       .eq('password', password)
       .single();
 
-    if (error || !data) {
-        console.error("Login error:", error);
-        return null;
+    if (error) {
+        console.error("Supabase login error:", error);
+        return { user: null, error: error.message };
+    }
+    
+    if (!data) {
+        console.log("No user found with provided credentials.");
+        return { user: null, error: "Username atau password salah." };
     }
 
-    return {
+    console.log("Login successful for:", data.username);
+    const user: User = {
         id: data.username,
         username: data.username,
         role: data.role,
@@ -48,6 +55,7 @@ export const api = {
         active_tp: data.active_tp || '',
         exam_type: data.exam_type || ''
     };
+    return { user, error: undefined };
   },
 
   startExam: async (username: string, fullname: string, subject: string): Promise<any> => {

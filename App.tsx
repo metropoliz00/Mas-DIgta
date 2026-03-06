@@ -115,7 +115,7 @@ function App() {
     setLoadingMessage('Mengautentikasi...');
     setErrorMsg('');
     try {
-        const user = await api.login(loginForm.username.trim(), loginForm.password.trim());
+        const { user, error } = await api.login(loginForm.username.trim(), loginForm.password.trim());
         if (user) {
             setCurrentUser(user);
             
@@ -143,7 +143,7 @@ function App() {
                 setView('confirm');
             }
         } else {
-            setErrorMsg('ID Pengguna atau Kata Sandi salah.');
+            setErrorMsg(error || 'ID Pengguna atau Kata Sandi salah.');
         }
     } catch (err: any) {
         setErrorMsg('Gagal terhubung ke server.');
