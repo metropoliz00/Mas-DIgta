@@ -42,8 +42,10 @@ export const api = {
           .from('users')
           .select('username');
           
-        if (allUsers) {
-            console.log("Available usernames in DB:", allUsers.map(u => u.username));
+        if (allUsersError) {
+            console.error("Error fetching all usernames:", allUsersError);
+        } else {
+            console.log("Available usernames in DB:", allUsers ? allUsers.map(u => u.username) : "Empty list");
         }
         
         return { user: null, error: "Username atau password salah." };
